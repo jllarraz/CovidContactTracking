@@ -23,7 +23,25 @@
             android:id="@+id/launch_server_background_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/server_background"/>
+            android:text="@string/start_server_background"/>
+
+        <Button
+            android:id="@+id/stop_server_background_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/stop_server_background"/>
+
+        <Button
+            android:id="@+id/launch_client_background_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/start_client_background"/>
+
+        <Button
+            android:id="@+id/stop_client_background_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/stop_client_background"/>
 
         <Button
             android:id="@+id/launch_client_button"

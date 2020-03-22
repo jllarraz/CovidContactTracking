@@ -36,7 +36,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     private var isServerAdvertising=false
     private var isServerInitialized=false
     private lateinit var localBroadcastManager: LocalBroadcastManager
-
+    private var serviceUUID:UUID?=null
 
     private val mBinder = ServerServiceBinder()
 
@@ -63,9 +63,15 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     override fun onHandleIntent(intent: Intent?) {
         when(intent?.action){
             Actions.ACTION_START_BLE_SERVER->{
+                serviceUUID = UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
                 initServer()
             }
             Actions.ACTION_RESTART_BLE_SERVER->{
+                if(intent.hasExtra(IntentData.KEY_SERVICE_UUID)) {
+                    serviceUUID =
+                        UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
+                }
+
                 if(isServerInitialized) {
                     restartServer()
                 } else{
@@ -75,7 +81,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
             Actions.ACTION_STOP_BLE_SERVER->{
                fullStopServer()
             }
-            Actions.ACTION_SEND_RESPONSE->{
+            Actions.ACTION_SEND_MESSAGE_SERVER->{
                 try {
                     if(intent.hasExtra(IntentData.KEY_DATA)) {
                         sendMessage(intent.getByteArrayExtra(IntentData.KEY_DATA)!!)
@@ -104,7 +110,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
             startActivity(enableBtIntent)
 */
             try {
-                val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_PERMISSIONS)
+                val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_ENABLE)
                 localBroadcastManager.sendBroadcast(intentRequest)
             }catch (e:Exception){
                 e.printStackTrace()
@@ -167,7 +173,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     // GattServer
     private fun setupGattServer() {
         val service = BluetoothGattService(
-            Constants.SERVICE_UUID,
+            serviceUUID,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
         // Write characteristic
         val writeCharacteristic = BluetoothGattCharacteristic(Constants.CHARACTERISTIC_ECHO_UUID,
@@ -201,7 +207,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                 .setTimeout(0)
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
                 .build()
-        val parcelUuid = ParcelUuid(Constants.SERVICE_UUID)
+        val parcelUuid = ParcelUuid(serviceUUID)
         val data = AdvertiseData.Builder()
                 .addServiceUuid(parcelUuid)
                 .build()
@@ -288,7 +294,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     // Notifications
     private fun notifyCharacteristic(value: ByteArray, uuid: UUID) {
         mHandler!!.post {
-            val service = mGattServer!!.getService(Constants.SERVICE_UUID)
+            val service = mGattServer!!.getService(serviceUUID)
             val characteristic = service.getCharacteristic(uuid)
             Log.d(TAG, "Notifying characteristic " + characteristic.uuid.toString()
                     + ", new value: " + StringUtils.byteArrayInHexFormat(value))

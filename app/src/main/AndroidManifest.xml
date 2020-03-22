@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -42,6 +43,34 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="com.altaureum.covid.tracking.common.action.STOP_BLE_SERVER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.SEND_MESSAGE_SERVER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".services.client.BLEClientServiceLight"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.START_SCAN_BLE_LIGHT_CLIENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.STOP_SCAN_BLE_LIGHT_CLIENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".services.client.BLEClientService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.START_BLE_CLIENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.STOP_BLE_CLIENT" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>

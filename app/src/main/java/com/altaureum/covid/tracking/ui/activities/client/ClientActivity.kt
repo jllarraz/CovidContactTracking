@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.altaureum.covid.tracking.R
 import com.altaureum.covid.tracking.common.Constants
+import com.altaureum.covid.tracking.services.client.DiscoveredDevice
 import com.altaureum.covid.tracking.ui.viewmodel.GattServerViewModel
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.StringUtils
@@ -250,6 +251,11 @@ class ClientActivity : AppCompatActivity() {
 
                 Toast.makeText(this@ClientActivity, "Distance: "+ calculateAccuracy, Toast.LENGTH_SHORT).show()
             }
+
+
+
+
+
             mScanResults[deviceAddress] = device
         }
 

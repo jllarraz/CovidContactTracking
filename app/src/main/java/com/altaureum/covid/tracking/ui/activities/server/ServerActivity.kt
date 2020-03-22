@@ -16,7 +16,6 @@ import android.os.ParcelUuid
 import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-
 import com.altaureum.covid.tracking.R
 import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.util.BluetoothUtils
@@ -24,7 +23,9 @@ import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
 import kotlinx.android.synthetic.main.activity_server.*
 import kotlinx.android.synthetic.main.view_log.*
+import java.lang.reflect.InvocationTargetException
 import java.util.*
+
 
 class ServerActivity : AppCompatActivity() {
     private var mHandler: Handler? = null
@@ -72,10 +73,39 @@ class ServerActivity : AppCompatActivity() {
         mBluetoothLeAdvertiser = mBluetoothAdapter!!.bluetoothLeAdvertiser
         val gattServerCallback = GattServerCallback()
         mGattServer = mBluetoothManager!!.openGattServer(this, gattServerCallback)
-        @SuppressLint("HardwareIds") val deviceInfo = "Device Info" + "\nName: " + mBluetoothAdapter!!.name + "\nAddress: " + mBluetoothAdapter!!.address
+        @SuppressLint("HardwareIds") val deviceInfo = "Device Info"+
+                "\nName: " + mBluetoothAdapter!!.name+
+                "\nAddress: " + mBluetoothAdapter!!.address+
+                "\nAddress Reflection: " + getBluetoothMacAddress()
+
         server_device_info_text_view.text = deviceInfo
         setupServer()
         startAdvertising()
+    }
+
+
+    private fun getBluetoothMacAddress(): String? {
+        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+        var bluetoothMacAddress = ""
+        try {
+            val mServiceField =
+                bluetoothAdapter.javaClass.getDeclaredField("mService")
+            mServiceField.isAccessible = true
+            val btManagerService = mServiceField[bluetoothAdapter]
+            if (btManagerService != null) {
+                bluetoothMacAddress = btManagerService.javaClass.getMethod("getAddress")
+                    .invoke(btManagerService) as String
+            }
+        } catch (ignore: NoSuchFieldException) {
+            ignore.printStackTrace()
+        } catch (ignore: NoSuchMethodException) {
+            ignore.printStackTrace()
+        } catch (ignore: IllegalAccessException) {
+            ignore.printStackTrace()
+        } catch (ignore: InvocationTargetException) {
+            ignore.printStackTrace()
+        }
+        return bluetoothMacAddress
     }
 
     override fun onPause() {
@@ -150,7 +180,7 @@ class ServerActivity : AppCompatActivity() {
             val service = mGattServer!!.getService(Constants.SERVICE_UUID)
             val characteristic = service.getCharacteristic(uuid)
             log("Notifying characteristic " + characteristic.uuid.toString()
-                    + ", new value: " + StringUtils.byteArrayInHexFormat(value))
+                    + ", new value: " + StringUtils.byteArrayInHexFormat(value)+ "\\nDecoded: "+String(value) )
             characteristic.value = value
             val confirm = BluetoothUtils.requiresConfirmation(characteristic)
             for (device in mDevices!!) {
