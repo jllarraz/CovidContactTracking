@@ -20,9 +20,9 @@ import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.ui.viewmodel.GattServerViewModel
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.StringUtils
-
 import kotlinx.android.synthetic.main.activity_client.*
 import kotlinx.android.synthetic.main.view_log.*
+
 import java.util.*
 
 class ClientActivity : AppCompatActivity() {
