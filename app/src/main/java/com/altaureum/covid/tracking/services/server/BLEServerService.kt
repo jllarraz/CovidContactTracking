@@ -1,6 +1,6 @@
 package com.altaureum.covid.tracking.services.server
 
-import android.app.Service
+import android.app.IntentService
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -12,14 +12,18 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.*
 import android.util.Log
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
+import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
+import java.lang.Exception
 
 import java.util.*
 
-class ServerService:Service() {
+class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 
     private var mHandler: Handler? = null
     private var mLogHandler: Handler? = null
@@ -28,19 +32,23 @@ class ServerService:Service() {
     private var mBluetoothManager: BluetoothManager? = null
     private var mBluetoothAdapter: BluetoothAdapter? = null
     private var mBluetoothLeAdvertiser: BluetoothLeAdvertiser? = null
+    private var isServerStarted=false
+    private var isServerAdvertising=false
+    private var isServerInitialized=false
+    private lateinit var localBroadcastManager: LocalBroadcastManager
 
 
     private val mBinder = ServerServiceBinder()
 
     inner class ServerServiceBinder:Binder(){
-        val service:ServerService
-        get() = this@ServerService
+        val service:BLEServerService
+        get() = this@BLEServerService
 
     }
 
     override fun onCreate() {
         super.onCreate()
-
+        localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
         mHandler = Handler()
         mLogHandler = Handler(Looper.getMainLooper())
         mDevices = ArrayList()
@@ -52,49 +60,112 @@ class ServerService:Service() {
         return mBinder
     }
 
+    override fun onHandleIntent(intent: Intent?) {
+        when(intent?.action){
+            Actions.ACTION_START_BLE_SERVER->{
+                initServer()
+            }
+            Actions.ACTION_RESTART_BLE_SERVER->{
+                if(isServerInitialized) {
+                    restartServer()
+                } else{
+                    initServer()
+                }
+            }
+            Actions.ACTION_STOP_BLE_SERVER->{
+               fullStopServer()
+            }
+            Actions.ACTION_SEND_RESPONSE->{
+                try {
+                    if(intent.hasExtra(IntentData.KEY_DATA)) {
+                        sendMessage(intent.getByteArrayExtra(IntentData.KEY_DATA)!!)
+                    }
+                }catch (e:Exception){
+                    e.printStackTrace()
+                }
+            }
+
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        var isInitError=false
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun unbindService(conn: ServiceConnection) {
+        fullStopServer()
+        super.unbindService(conn)
+    }
+
+    fun initServer(){
         if (mBluetoothAdapter == null || !mBluetoothAdapter!!.isEnabled) { // Request user to enable it
+           /*
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             startActivity(enableBtIntent)
-            isInitError=true
+*/
+            try {
+                val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_PERMISSIONS)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
+            return
         }
         // Check low energy support
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) { // Get a newer device
             Log.e(TAG, "No LE Support.")
-            isInitError=true
-            onErrorStarting()
+            try {
+                val intentRequest = Intent(Actions.ACTION_ERROR_BLE_NOT_SUPPORTED)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
+            return
 
         }
         // Check advertising
         if (!mBluetoothAdapter!!.isMultipleAdvertisementSupported) { // Unable to run the server on this device, get a better device
-            Log.e(TAG, "No Advertising Support.")
-            onErrorStarting()
-            isInitError=true
+            try {
+                val intentRequest =
+                    Intent(Actions.ACTION_ERROR_BLE_ADVERTISMENT_NOT_SUPPORTED)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
+            return
         }
         mBluetoothLeAdvertiser = mBluetoothAdapter!!.bluetoothLeAdvertiser
         val gattServerCallback = gattServerCallback()
         mGattServer = mBluetoothManager!!.openGattServer(this, gattServerCallback)
+        isServerInitialized = true
         //@SuppressLint("HardwareIds") val deviceInfo = "Device Info" + "\nName: " + mBluetoothAdapter!!.name + "\nAddress: " + mBluetoothAdapter!!.address
-        setupServer()
+        fullStartSever()
+    }
+
+    fun fullStartSever(){
+        setupGattServer()
         startAdvertising()
-
-        return START_NOT_STICKY
+        try {
+            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_STARTED)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
     }
 
-    override fun unbindService(conn: ServiceConnection) {
+    fun fullStopServer(){
         stopAdvertising()
-        stopServer()
-        super.unbindService(conn)
+        stopGattServer()
+        try {
+            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_STOPED)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
     }
-
-    fun onErrorStarting(){
-
-    }
-
 
     // GattServer
-    private fun setupServer() {
+    private fun setupGattServer() {
         val service = BluetoothGattService(
             Constants.SERVICE_UUID,
                 BluetoothGattService.SERVICE_TYPE_PRIMARY)
@@ -105,19 +176,19 @@ class ServerService:Service() {
                 BluetoothGattCharacteristic.PERMISSION_WRITE)
         service.addCharacteristic(writeCharacteristic)
         mGattServer!!.addService(service)
+        isServerStarted = true
     }
 
-    private fun stopServer() {
+    private fun stopGattServer() {
         if (mGattServer != null) {
             mGattServer!!.close()
         }
+        isServerStarted = false
     }
 
     private fun restartServer() {
-        stopAdvertising()
-        stopServer()
-        setupServer()
-        startAdvertising()
+        fullStopServer()
+        fullStartSever()
     }
 
     // Advertising
@@ -135,20 +206,36 @@ class ServerService:Service() {
                 .addServiceUuid(parcelUuid)
                 .build()
         mBluetoothLeAdvertiser!!.startAdvertising(settings, data, mAdvertiseCallback)
+        isServerAdvertising = true
     }
 
     private fun stopAdvertising() {
         if (mBluetoothLeAdvertiser != null) {
             mBluetoothLeAdvertiser!!.stopAdvertising(mAdvertiseCallback)
         }
+        isServerAdvertising= false
     }
 
     private val mAdvertiseCallback: AdvertiseCallback = object : AdvertiseCallback() {
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+            try {
+                val intentRequest = Intent(Actions.ACTION_ERROR_BLE_ADVERTISMENT_SUCCESS)
+                intentRequest.putExtra(IntentData.KEY_DATA, settingsInEffect)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
             Log.d(TAG, "Peripheral advertising started.")
         }
 
         override fun onStartFailure(errorCode: Int) {
+            try {
+                val intentRequest = Intent(Actions.ACTION_ERROR_BLE_ADVERTISMENT_FAILED)
+                intentRequest.putExtra(IntentData.KEY_DATA, errorCode)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
             Log.d(TAG, "Peripheral advertising failed: $errorCode")
         }
     }
@@ -156,11 +243,25 @@ class ServerService:Service() {
     // Gatt Server Action Listener
     fun addDevice(device: BluetoothDevice) {
         Log.d(TAG, "Deviced added: " + device.address)
+        try {
+            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_DEVICE_ADDED)
+            intentRequest.putExtra(IntentData.KEY_DATA, device)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
         mHandler!!.post { mDevices!!.add(device) }
     }
 
     fun removeDevice(device: BluetoothDevice) {
         Log.d(TAG, "Deviced removed: " + device.address)
+        try {
+            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_DEVICE_REMOVED)
+            intentRequest.putExtra(IntentData.KEY_DATA, device)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
         mHandler!!.post { mDevices!!.remove(device) }
     }
 
@@ -169,11 +270,14 @@ class ServerService:Service() {
     }
 
     private fun sendReverseMessage(message: ByteArray) {
+        val response = ByteUtils.reverse(message)
+        sendMessage(response)
+    }
+    private fun sendMessage(message: ByteArray) {
         mHandler!!.post {
             // Reverse message to differentiate original message & response
-            val response = ByteUtils.reverse(message)
-            Log.d(TAG, "Sending: " + StringUtils.byteArrayInHexFormat(response))
-            notifyCharacteristicEcho(response)
+            Log.d(TAG, "Sending: " + StringUtils.byteArrayInHexFormat(message))
+            notifyCharacteristicEcho(message)
         }
     }
 
@@ -245,17 +349,31 @@ class ServerService:Service() {
                     + "\nReceived: " + StringUtils.byteArrayInHexFormat(value))
             if (Constants.CHARACTERISTIC_ECHO_UUID == characteristic.uuid) {
                 sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                try {
+                    val intentRequest = Intent(Actions.ACTION_BLE_SERVER_MESSAGE_RECEIVED)
+                    intentRequest.putExtra(IntentData.KEY_DATA, value)
+                    localBroadcastManager.sendBroadcast(intentRequest)
+                }catch (e:Exception){
+                    e.printStackTrace()
+                }
+                //TODO remove the sending back or replace it by ID
                 sendReverseMessage(value)
             }
         }
 
         override fun onNotificationSent(device: BluetoothDevice, status: Int) {
             super.onNotificationSent(device, status)
+            try {
+                val intentRequest = Intent(Actions.ACTION_BLE_SERVER_NOTIFICATION_SENT)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            }catch (e:Exception){
+                e.printStackTrace()
+            }
             Log.d(TAG, "onNotificationSent")
         }
     }
 
     companion object{
-        val TAG = ServerService::class.java.simpleName
+        val TAG = BLEServerService::class.java.simpleName
     }
 }
