@@ -83,7 +83,8 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
  */
             try {
                 val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_ENABLE)
-                localBroadcastManager.sendBroadcast(intentRequest)
+                startActivity(intentRequest)
+                //localBroadcastManager.sendBroadcast(intentRequest)
             }catch (e:Exception){
                 e.printStackTrace()
             }
@@ -106,7 +107,7 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             try {
                 val intentRequest =
                     Intent(Actions.ACTION_REQUEST_LOCATION_PERMISSIONS)
-                localBroadcastManager.sendBroadcast(intentRequest)
+                startActivity(intentRequest)
             }catch (e:Exception){
                 e.printStackTrace()
             }

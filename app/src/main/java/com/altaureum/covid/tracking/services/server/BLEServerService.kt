@@ -117,7 +117,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 */
             try {
                 val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_ENABLE)
-                localBroadcastManager.sendBroadcast(intentRequest)
+                startActivity(intentRequest)
             }catch (e:Exception){
                 e.printStackTrace()
             }

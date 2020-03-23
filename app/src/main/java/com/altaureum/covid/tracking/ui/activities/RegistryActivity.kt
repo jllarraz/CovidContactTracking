@@ -92,7 +92,9 @@ class RegistryActivity : AppCompatActivity(), HasAndroidInjector, FragmentRegist
     private fun requestLocationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Log.d(TAG, "Requested user enable Location. Try starting the scan again.")
-            requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            val arrayOf = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+            requestPermissions(
+                arrayOf,
                 REQUEST_FINE_LOCATION
             )
         }

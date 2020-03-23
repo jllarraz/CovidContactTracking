@@ -42,6 +42,20 @@
             android:label="@string/registry_title"
             android:windowSoftInputMode="stateHidden"/>
 
+        <activity
+            android:name=".ui.activities.PermissionsActivity"
+            android:label="@string/registry_title"
+            android:windowSoftInputMode="stateHidden">
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.REQUEST_LOCATION_PERMISSIONS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.REQUEST_BLE_ENABLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <service android:name=".services.server.BLEServerService"
             android:exported="false">
             <intent-filter>

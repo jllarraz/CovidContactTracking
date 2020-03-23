@@ -45,6 +45,12 @@
 
     <string name="registry_title">Registry</string>
     <string name="contacts_title">Contacts</string>
+    <string name="permissions_title">Permissions</string>
+
+    <string name="permission_message">"Permission to access the Location is required for the app."</string>
+    <string name="permission_title">"Permission required"</string>
+    <string name="permission_message_after_deny">"You did not give the app permission for Location. Please set these permissions manually in Settings > Apps > Covid Tracking > Permissions"</string>
+
 
 
 </resources>
