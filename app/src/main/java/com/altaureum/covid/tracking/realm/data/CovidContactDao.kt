@@ -23,7 +23,7 @@ class CovidContactDao(val realm: Realm) {
         if(numberOfResults>0) {
             query.limit(numberOfResults)
         }
-        query.beginGroup()
+       // query.beginGroup()
         if (fromDate!=null) {
             query.and()
             query.lessThanOrEqualTo("contactDate", fromDate)
@@ -36,7 +36,7 @@ class CovidContactDao(val realm: Realm) {
         if (covidId!=null) {
             query.and().equalTo("covidId", covidId, Case.INSENSITIVE)
         }
-        query.endGroup()
+        //query.endGroup()
         return query.sort(fieldNames, sortOrders)
     }
 
@@ -45,14 +45,12 @@ class CovidContactDao(val realm: Realm) {
                     numberOfResults:Long=-1,
                     fromDate: Date? = null,
                     toDate: Date?=null,
-                            fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
-                            sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
+                    fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                    sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
         val query = realm.where(CovidContact::class.java)
 
-        if(numberOfResults>0) {
-            query.limit(numberOfResults)
-        }
-        query.beginGroup()
+
+       // query.beginGroup()
         if (fromDate!=null) {
             query.and()
             query.lessThanOrEqualTo("contactDate", fromDate)
@@ -65,7 +63,12 @@ class CovidContactDao(val realm: Realm) {
         if (covidIds!=null) {
             query.and().`in`("covidId", covidIds, Case.INSENSITIVE)
         }
-        query.endGroup()
+        //query.endGroup()
+
+        if(numberOfResults>0) {
+            query.limit(numberOfResults)
+        }
+
         return query.sort(fieldNames, sortOrders)
     }
 

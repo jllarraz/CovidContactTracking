@@ -4,6 +4,7 @@ import android.accounts.AccountManager
 import android.content.Context
 import android.net.Uri
 import com.altaureum.covid.tracking.R
+import com.altaureum.covid.tracking.realm.CovidModule
 import com.altaureum.covid.tracking.realm.data.CovidContact
 import java.io.File
 
@@ -32,7 +33,7 @@ object RealmUtils {
         return RealmConfiguration.Builder()
                 .directory(folder)
                 .name(filename)
-                .modules(Realm.getDefaultModule(), CovidContact())
+                .modules(Realm.getDefaultModule(), CovidModule())
                 .schemaVersion(SCHEMA_VERSION)
                 .deleteRealmIfMigrationNeeded()
 

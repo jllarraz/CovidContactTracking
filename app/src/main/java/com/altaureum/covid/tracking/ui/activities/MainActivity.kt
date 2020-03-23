@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity(), HasAndroidInjector {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        //setContentView(R.layout.activity_main)
         AndroidInjection.inject(this)
 
 
@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity(), HasAndroidInjector {
             PreferenceManager.getDefaultSharedPreferences(applicationContext)
         val covidId = defaultSharedPreferences.getString(Preferences.KEY_COVID_ID, null)
 
-        if(covidId!=null){
+        if(covidId==null){
             val intentRequest = Intent(this, RegistryActivity::class.java)
             startActivityForResult(intentRequest, REQUEST_REGISTRY)
         } else{
