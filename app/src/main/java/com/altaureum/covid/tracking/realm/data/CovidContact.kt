@@ -7,7 +7,7 @@ import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 import java.util.*
 
-class CovidContact:Parcelable, RealmObject {
+open class CovidContact:Parcelable, RealmObject {
 
     @PrimaryKey
     var uuid: String = UUID.randomUUID().toString()

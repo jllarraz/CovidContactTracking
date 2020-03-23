@@ -20,18 +20,32 @@ import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.ui.activities.client.ClientActivity
 import com.altaureum.covid.tracking.ui.activities.server.ServerActivity
+import dagger.android.AndroidInjection
+import dagger.android.AndroidInjector
+import dagger.android.DispatchingAndroidInjector
+import dagger.android.HasAndroidInjector
 
 import kotlinx.android.synthetic.main.activity_main.*
 import java.lang.Exception
 import java.util.*
+import javax.inject.Inject
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), HasAndroidInjector {
 
     val uuid = Constants.SERVICE_UUID
+
+    @Inject
+    open lateinit var fragmentDispatchingAndroidInjector: DispatchingAndroidInjector<Any>
+
+    override fun androidInjector(): AndroidInjector<Any>? {
+        return fragmentDispatchingAndroidInjector
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        AndroidInjection.inject(this)
+
         launch_server_button.setOnClickListener { v: View? ->
             startActivity(Intent(this@MainActivity,
                     ServerActivity::class.java))
