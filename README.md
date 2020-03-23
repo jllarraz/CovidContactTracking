@@ -6,7 +6,7 @@ The whole Idea of the the project is to try to be the framework that other use t
 
 So the idea is that every phone has a server and a client that interchange their "COVID IDs" and then if someone is infected you can check those Ids and warn them.
 
-The purpose of the project don´t involve the creation of the Backend servers necessary to do the registration and generation of the COVID ids.
+The purpose of the project don´t involve the creation of the Backend servers necessary to do the registration and generation of the COVID ids. Or the creation of any final app, as I said this is just an example to be used as a starting points for other developments.
 
 This project is based in the information and tutorials found in
 
