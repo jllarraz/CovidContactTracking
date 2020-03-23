@@ -86,6 +86,9 @@ class MainActivity : AppCompatActivity(), HasAndroidInjector {
                     }
                 }
             }
+            REQUEST_CONTACT_LIST->{
+                finish()
+            }
         }
         super.onActivityResult(requestCode, resultCode, data)
 

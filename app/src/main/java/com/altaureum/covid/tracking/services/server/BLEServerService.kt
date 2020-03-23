@@ -14,10 +14,14 @@ import android.os.*
 import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
+import com.altaureum.covid.tracking.MyApplication.Companion.context
 import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.common.Preferences
+import com.altaureum.covid.tracking.realm.data.CovidContact
+import com.altaureum.covid.tracking.realm.utils.RealmUtils
+import com.altaureum.covid.tracking.realm.utils.covidContacts
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
@@ -288,7 +292,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     private fun sendMessage(message: ByteArray) {
         mHandler!!.post {
             // Reverse message to differentiate original message & response
-            Log.d(TAG, "Sending: " + StringUtils.byteArrayInHexFormat(message))
+            Log.d(TAG, "Message Send: " + StringUtils.byteArrayInHexFormat(message))
             notifyCharacteristicEcho(message)
         }
     }
@@ -368,13 +372,13 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                 }catch (e:Exception){
                     e.printStackTrace()
                 }
-                onMessageReceived(value, device)
                 //Send info Back to sender
                 val defaultSharedPreferences =
                     PreferenceManager.getDefaultSharedPreferences(applicationContext)
                 val covidId = defaultSharedPreferences.getString(Preferences.KEY_COVID_ID, "")!!
                 //We notify all the clients our COVID ID
                 sendMessage(covidId)
+                onMessageReceived(value, device)
             }
         }
 
@@ -392,6 +396,14 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 
     fun onMessageReceived(message: ByteArray, bluetoothDevice: BluetoothDevice){
         Log.d(TAG, "Message Received: "+String(message))
+        val covidContact = CovidContact()
+        covidContact.covidId=String(message)
+        covidContact.contactDate=Date()
+        val realm = RealmUtils.getInstance(context!!)
+        realm!!.covidContacts().putSync(covidContact)
+        realm.close()
+
+
     }
 
     companion object{

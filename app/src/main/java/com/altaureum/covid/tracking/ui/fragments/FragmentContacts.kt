@@ -113,7 +113,7 @@ class FragmentContacts: Fragment(), Injectable {
             //empty_view!!.visibility = View.VISIBLE
         } else {
             layout_empty!!.visibility = View.GONE
-            loadingLayout.visibility = View.VISIBLE
+            loadingLayout.visibility = View.GONE
             //empty_view!!.visibility = View.GONE
             list!!.visibility = View.VISIBLE
         }
@@ -122,7 +122,7 @@ class FragmentContacts: Fragment(), Injectable {
     private fun showProgressBar(isShown:Boolean){
         if(isShown){
             list!!.visibility = View.GONE
-            layout_empty!!.visibility = View.VISIBLE
+            layout_empty!!.visibility = View.GONE
             loadingLayout.visibility = View.VISIBLE
         } else {
             layout_empty!!.visibility = View.GONE
