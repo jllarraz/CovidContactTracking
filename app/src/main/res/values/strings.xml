@@ -34,4 +34,17 @@
 
     <string name="logs">Logs</string>
     <string name="clear">Clear</string>
+
+    <string name="no_data_available">N/A</string>
+    <string name="no_contacts">No contacts registered</string>
+    <string name="loading">Loading</string>
+
+    <string name="hint_covid_id">Enter Your Covid Id</string>
+    <string name="button_continue">Continue</string>
+    <string name="warning_bad_covid">You need to enter a non empty Id</string>
+
+    <string name="registry_title">Registry</string>
+    <string name="contacts_title">Contacts</string>
+
+
 </resources>

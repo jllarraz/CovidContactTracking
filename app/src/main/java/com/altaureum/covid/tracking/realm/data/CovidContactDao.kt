@@ -16,8 +16,8 @@ class CovidContactDao(val realm: Realm) {
                 numberOfResults:Long=-1,
                 fromDate: Date? = null,
                 toDate: Date?=null,
-                fieldNames: Array<String>,
-                sortOrders: Array<Sort>): RealmQuery<CovidContact> {
+                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
         val query = realm.where(CovidContact::class.java)
 
         if(numberOfResults>0) {
@@ -45,8 +45,8 @@ class CovidContactDao(val realm: Realm) {
                     numberOfResults:Long=-1,
                     fromDate: Date? = null,
                     toDate: Date?=null,
-                    fieldNames: Array<String>,
-                    sortOrders: Array<Sort>): RealmQuery<CovidContact> {
+                            fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                            sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
         val query = realm.where(CovidContact::class.java)
 
         if(numberOfResults>0) {
@@ -75,8 +75,8 @@ class CovidContactDao(val realm: Realm) {
                 numberOfResults:Long=-1,
                 fromDate: Date? = null,
                 toDate: Date?=null,
-                fieldNames: Array<String>,
-                sortOrders: Array<Sort>): RealmResults<CovidContact> {
+                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
         return getBaseSync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAll()
     }
 
@@ -85,8 +85,8 @@ class CovidContactDao(val realm: Realm) {
                 numberOfResults:Long=-1,
                 fromDate: Date? = null,
                 toDate: Date?=null,
-                fieldNames: Array<String>,
-                sortOrders: Array<Sort>): RealmResults<CovidContact> {
+                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
         return getBaseSync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAll()
     }
 
@@ -95,8 +95,8 @@ class CovidContactDao(val realm: Realm) {
                      numberOfResults:Long=-1,
                      fromDate: Date? = null,
                      toDate: Date?=null,
-                     fieldNames: Array<String>,
-                     sortOrders: Array<Sort>): RealmResults<CovidContact> {
+                     fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                     sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
         return getBaseSync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAllAsync()
     }
 
@@ -105,8 +105,8 @@ class CovidContactDao(val realm: Realm) {
                 numberOfResults:Long=-1,
                 fromDate: Date? = null,
                 toDate: Date?=null,
-                fieldNames: Array<String>,
-                sortOrders: Array<Sort>): RealmResults<CovidContact> {
+                 fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                 sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
         return getBaseSync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAllAsync()
     }
 
@@ -115,8 +115,8 @@ class CovidContactDao(val realm: Realm) {
                  numberOfResults:Long=-1,
                  fromDate: Date? = null,
                  toDate: Date?=null,
-                 fieldNames: Array<String>,
-                 sortOrders: Array<Sort>): LiveRealmData<CovidContact> {
+                 fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                 sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): LiveRealmData<CovidContact> {
         return getAsync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).asLiveData()
     }
 
@@ -125,8 +125,8 @@ class CovidContactDao(val realm: Realm) {
                  numberOfResults:Long=-1,
                  fromDate: Date? = null,
                  toDate: Date?=null,
-                 fieldNames: Array<String>,
-                 sortOrders: Array<Sort>): LiveRealmData<CovidContact> {
+                   fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                   sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): LiveRealmData<CovidContact> {
         return getAsync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).asLiveData()
     }
 
@@ -305,5 +305,25 @@ class CovidContactDao(val realm: Realm) {
             results.deleteAllFromRealm()
 
         }
+    }
+
+    fun search(search: String, fieldNames: Array<String> = arrayOf("covidId"), sortOrders: Array<Sort> = arrayOf(Sort.DESCENDING)): RealmResults<CovidContact> {
+        val split = search.split(" ".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        val query = realm.where(CovidContact::class.java)
+
+        query.beginGroup()
+        for ((index, fieldName) in fieldNames.withIndex()) {
+            query.beginGroup()
+            for (term in split) {
+                query.and().contains(fieldName, term, Case.INSENSITIVE)
+            }
+            query.endGroup()
+            if(index<fieldNames.size-1){
+                query.or()
+            }
+        }
+        query.endGroup()
+
+        return query.sort(fieldNames, sortOrders).findAllAsync()
     }
 }

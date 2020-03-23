@@ -32,6 +32,16 @@
             android:label="@string/bluetooth_client"
             android:windowSoftInputMode="stateHidden"/>
 
+        <activity
+            android:name=".ui.activities.ContactListActivity"
+            android:label="@string/contacts_title"
+            android:windowSoftInputMode="stateHidden"/>
+
+        <activity
+            android:name=".ui.activities.RegistryActivity"
+            android:label="@string/registry_title"
+            android:windowSoftInputMode="stateHidden"/>
+
         <service android:name=".services.server.BLEServerService"
             android:exported="false">
             <intent-filter>
