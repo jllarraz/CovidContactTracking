@@ -20,7 +20,7 @@ This project is based in the information and tutorials found in
     1. Clone Repository
     2. Open with Android Studio
     3. Configure Android SDK
-    4. Launch application
+    4. Launch application (You will need 2 phones minimum with Bluetooth LE running the app at the same time)
 ```
 
 
