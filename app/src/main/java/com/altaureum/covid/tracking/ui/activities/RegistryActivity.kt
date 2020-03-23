@@ -13,9 +13,6 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.altaureum.covid.tracking.R
-import com.altaureum.covid.tracking.realm.data.CovidContact
-import com.altaureum.covid.tracking.ui.activities.client.ClientActivity
-import com.altaureum.covid.tracking.ui.fragments.FragmentContacts
 import com.altaureum.covid.tracking.ui.fragments.FragmentRegistry
 import dagger.android.AndroidInjection
 import dagger.android.AndroidInjector

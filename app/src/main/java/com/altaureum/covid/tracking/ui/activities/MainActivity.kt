@@ -12,24 +12,16 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.altaureum.covid.tracking.MyApplication
-import com.altaureum.covid.tracking.R
-import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
-import com.altaureum.covid.tracking.common.IntentData
+
 import com.altaureum.covid.tracking.common.Preferences
-import com.altaureum.covid.tracking.ui.activities.client.ClientActivity
-import com.altaureum.covid.tracking.ui.activities.server.ServerActivity
 import dagger.android.AndroidInjection
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
 import dagger.android.HasAndroidInjector
 
-import kotlinx.android.synthetic.main.activity_main.*
-import java.lang.Exception
-import java.util.*
 import javax.inject.Inject
 
 class MainActivity : AppCompatActivity(), HasAndroidInjector {
