@@ -2,6 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'realm-android'
 
 android {
     compileSdkVersion 29
@@ -30,6 +31,9 @@ android {
         targetCompatibility 1.8
         sourceCompatibility 1.8
     }
+    packagingOptions {
+        exclude 'META-INF/proguard/androidx-annotations.pro'
+    }
 
 }
 
@@ -44,5 +48,23 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation 'androidx.preference:preference:1.1.0'
+
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+
+    //Realm
+    implementation "io.realm:android-adapters:3.1.0"
+
+    //RX
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.15'
+
+    //Dagger
+    implementation "com.google.dagger:dagger:2.25.2"
+    kapt "com.google.dagger:dagger-compiler:2.25.2"
+    implementation "com.google.dagger:dagger-android:2.25.2"
+    implementation "com.google.dagger:dagger-android-support:2.25.2"
+    // if you use the support libraries
+    kapt "com.google.dagger:dagger-android-processor:2.25.2"
+
 
 }
