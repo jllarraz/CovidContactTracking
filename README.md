@@ -1,4 +1,4 @@
-# Passport Reader
+# Covid Contact Tracking App
 
 Sample project to keep a record of the people that you cross in the street and they are using this app. It´s based in Bluethoot LE.
 
