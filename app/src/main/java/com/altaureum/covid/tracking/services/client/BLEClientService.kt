@@ -6,20 +6,21 @@ import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.*
+import 	androidx.preference.PreferenceManager
 import android.util.Log
 import android.widget.Toast
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
-import com.altaureum.covid.tracking.services.server.BLEServerService
-import com.altaureum.covid.tracking.ui.activities.client.ClientActivity
+import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.StringUtils
-import kotlinx.android.synthetic.main.activity_client.*
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
 
@@ -185,15 +186,22 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
 
             if(mScanResults.containsKey(deviceAddress)){
                 val bluetoothDevice = mScanResults[deviceAddress]!!
-                if(!bluetoothDevice.isTryingToConnect){
+                var minutesSinceLastUpdate:Int
+                try {
+                    minutesSinceLastUpdate = TimeUnit.MILLISECONDS.toMinutes(Date().time - bluetoothDevice.lastUpdated?.time!!).toInt()
+                }catch (e:java.lang.Exception){
+                    minutesSinceLastUpdate=-1
+                }
+                // If we know this device we try to connec if is not trying to connect and  we didnt connect in the last 5 minutes or never
+                if(!bluetoothDevice.isTryingToConnect && (minutesSinceLastUpdate == -1 || minutesSinceLastUpdate>5)){
                     connectDevice(bluetoothDevice.device)
                 }
 
             }else{
                 val discoveredDevice = DiscoveredDevice()
                 discoveredDevice.device = device
+                mScanResults[deviceAddress] = discoveredDevice
                 connectDevice(discoveredDevice.device)
-
             }
             //mScanResults[deviceAddress] = device
         }
@@ -264,19 +272,20 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             super.onCharacteristicRead(gatt, characteristic, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "Characteristic read successfully")
-                readCharacteristic(characteristic)
+                readCharacteristic(characteristic, gatt)
             } else {
                 Log.e(TAG, "Characteristic read unsuccessful, status: $status")
                 // Trying to read from the Time Characteristic? It doesnt have the property or permissions
 // set to allow this. Normally this would be an error and you would want to:
 // disconnectGattServer();
+                disconnectGattServer(gatt)
             }
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             super.onCharacteristicChanged(gatt, characteristic)
             Log.d(TAG, "Characteristic changed, " + characteristic.uuid.toString())
-            readCharacteristic(characteristic)
+            readCharacteristic(characteristic, gatt)
         }
 
         private fun enableCharacteristicNotification(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
@@ -285,7 +294,16 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
                 Log.d(TAG, "Characteristic notification set successfully for " + characteristic.uuid.toString())
                 if (BluetoothUtils.isEchoCharacteristic(characteristic)) {
                     mEchoInitialized = true
-                    sendMessage("ti did eW", gatt)
+
+                    val defaultSharedPreferences =
+                        PreferenceManager.getDefaultSharedPreferences(applicationContext)
+                    val covidId = defaultSharedPreferences.getString(Preferences.KEY_COVID_ID, "")!!
+
+                    val isMessageSent = sendMessage(covidId, gatt)
+                    if(isMessageSent) {
+                        val discoveredDevice = mScanResults?.get(gatt.device.address)
+                        discoveredDevice?.lastUpdated = Date()
+                    }
                     disconnectGattServer(gatt)
                 }
             } else {
@@ -293,7 +311,7 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             }
         }
 
-        private fun readCharacteristic(characteristic: BluetoothGattCharacteristic) {
+        private fun readCharacteristic(characteristic: BluetoothGattCharacteristic, gatt: BluetoothGatt) {
             val messageBytes = characteristic.value
             Log.d(TAG, "Read: " + StringUtils.byteArrayInHexFormat(messageBytes))
             val message = StringUtils.stringFromBytes(messageBytes)
@@ -301,19 +319,22 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
                 Log.e(TAG, "Unable to convert bytes to string")
                 return
             }
-            Log.d(TAG, "Received message: $message")
+            onReceivedMessage(messageBytes, gatt)
+
         }
 
         fun disconnectGattServer(gatt: BluetoothGatt) {
             Log.d(TAG, "Closing Gatt connection")
+            val discoveredDevice = mScanResults?.get(gatt.device.address)
+            discoveredDevice?.isTryingToConnect = false
             mConnected = false
             mEchoInitialized = false
             gatt.disconnect()
             gatt.close()
         }
 
-        private fun sendMessage(message:String, gatt: BluetoothGatt){
-            sendMessage(StringUtils.bytesFromString(message), gatt)
+        private fun sendMessage(message:String, gatt: BluetoothGatt):Boolean{
+            return sendMessage(StringUtils.bytesFromString(message), gatt)
         }
 
         // Messaging
@@ -340,6 +361,10 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             }
             return true
         }
+
+        fun onReceivedMessage(message: ByteArray, gatt: BluetoothGatt){
+            Log.d(TAG, "Received message: "+String(message)+ "From: "+gatt.device.address)
+        }
     }
 
     fun onScanCompleted(){
@@ -355,6 +380,9 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
     // Gatt connection
     private fun connectDevice(device: BluetoothDevice?) {
         Log.d(TAG, "Connecting to " + device!!.address)
+        val discoveredDevice = mScanResults?.get(device.address)
+        discoveredDevice?.isTryingToConnect = true
+
         val gattClientCallback = GattClientCallback()
         val connectGatt = device.connectGatt(this, false, gattClientCallback)
     }

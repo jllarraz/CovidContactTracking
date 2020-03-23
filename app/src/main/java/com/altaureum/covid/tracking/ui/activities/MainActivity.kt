@@ -1,6 +1,7 @@
 package com.altaureum.covid.tracking.ui.activities
 
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,10 +12,12 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.preference.PreferenceManager
 import com.altaureum.covid.tracking.R
 import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
+import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.ui.activities.client.ClientActivity
 import com.altaureum.covid.tracking.ui.activities.server.ServerActivity
 
@@ -68,6 +71,16 @@ class MainActivity : AppCompatActivity() {
 
         val localBroadcastManager = LocalBroadcastManager.getInstance(this)
         localBroadcastManager.registerReceiver(bleServerRegister, intentFilter)
+
+
+        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        val name = bluetoothManager.adapter.name
+        val defaultSharedPreferences =
+            PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        val edit = defaultSharedPreferences.edit()
+        edit.putString(Preferences.KEY_COVID_ID, name)
+        edit.commit()
+        //val covidId = defaultSharedPreferences.getString(Preferences.KEY_COVID_ID, "")!!
     }
 
     override fun onDestroy() {
