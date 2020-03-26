@@ -13,9 +13,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.altaureum.covid.tracking.MyApplication
 import com.altaureum.covid.tracking.MyApplication.Companion.context
 import com.altaureum.covid.tracking.R
+import com.altaureum.covid.tracking.common.Actions
 import dagger.android.AndroidInjection
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
@@ -38,11 +40,8 @@ class PermissionsActivity: AppCompatActivity(), HasAndroidInjector {
         AndroidInjection.inject(this)
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = bluetoothManager.adapter
-    }
 
 
-    override fun onResume() {
-        super.onResume()
         // Check low energy support
         if (!packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) { // Get a newer device
             Toast.makeText(this, "No LE Support.", Toast.LENGTH_SHORT).show()
@@ -53,6 +52,12 @@ class PermissionsActivity: AppCompatActivity(), HasAndroidInjector {
                 onPermissionsGranted()
             }
         }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+
     }
 
     override fun onDestroy() {
@@ -149,7 +154,7 @@ class PermissionsActivity: AppCompatActivity(), HasAndroidInjector {
                     }
                 }
 
-                if(permissionsGranted.isNotEmpty()){
+                if(permissionsGranted.isNotEmpty() && permissionsDenied.isEmpty()){
                     onPermissionsGranted()
                 }
             }
@@ -161,11 +166,20 @@ class PermissionsActivity: AppCompatActivity(), HasAndroidInjector {
 
 
     fun onPermissionsGranted(){
-        (applicationContext as MyApplication).startServer()
-        (applicationContext as MyApplication).startClient()
+        startTracker()
         finish()
     }
 
+
+    fun startTracker(){
+        try {
+            val localBroadcastManager = LocalBroadcastManager.getInstance(this)
+            val intentRequest = Intent(Actions.ACTION_START_TRACKER)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
 
     companion object{
         val TAG =PermissionsActivity::class.java.simpleName

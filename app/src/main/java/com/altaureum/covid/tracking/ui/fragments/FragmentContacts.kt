@@ -9,7 +9,11 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.fragment.app.Fragment
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.altaureum.covid.tracking.MyApplication
 import com.altaureum.covid.tracking.R
+import com.altaureum.covid.tracking.common.Actions
+import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.di.Injectable
 import com.altaureum.covid.tracking.realm.data.CovidContact
 import com.altaureum.covid.tracking.realm.utils.LiveRealmData
@@ -38,6 +42,8 @@ class FragmentContacts: Fragment(), Injectable {
 
 
     val handler: Handler = Handler()
+
+    var isServerStarted = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
                               savedInstanceState: Bundle?): View? {
@@ -95,9 +101,56 @@ class FragmentContacts: Fragment(), Injectable {
                     e.printStackTrace()
                 }
             })
+
+        deleteDb.setOnClickListener {
+
+            realm?.covidContacts()?.deleteAllSingle()?.subscribe { success->
+                showBlankSlateIfEmpty()
+            }
+        }
+
+
+        severButton.setOnClickListener {
+            if(isServerStarted){
+                stopTracker()
+            } else{
+                startTracker()
+            }
+        }
+
+        val intentFilter = IntentFilter()
+        intentFilter.addAction(Actions.ACTION_TRACKER_STOPPED)
+        intentFilter.addAction(Actions.ACTION_TRACKER_STOPPED)
+        intentFilter.addAction(Actions.ACTION_TRACKER_STATUS_RESPONSE)
+
+        val localBroadcastManager = LocalBroadcastManager.getInstance(MyApplication.context!!.applicationContext)
+        localBroadcastManager.registerReceiver(bleServerRegister, intentFilter)
+        if(savedInstanceState!=null){
+            isServerStarted = savedInstanceState.getBoolean(KEY_IS_SERVER_STARTED)
+        }
+    }
+
+    val bleServerRegister = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when(intent.action){
+                Actions.ACTION_TRACKER_STOPPED->{
+                    isServerStarted=false
+                    onUpdateServerButton()
+                }
+                Actions.ACTION_TRACKER_STARTED->{
+                    isServerStarted=true
+                    onUpdateServerButton()
+                }
+                Actions.ACTION_TRACKER_STATUS_RESPONSE->{
+                    isServerStarted=intent.getBooleanExtra(IntentData.KEY_DATA, false)
+                    onUpdateServerButton()
+                }
+            }
+        }
     }
 
     override fun onResume() {
+        checkTrackerStatus()
         super.onResume()
     }
 
@@ -146,6 +199,10 @@ class FragmentContacts: Fragment(), Injectable {
         mListener = null
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(KEY_IS_SERVER_STARTED, isServerStarted)
+        super.onSaveInstanceState(outState)
+    }
 
     override fun onDestroyView() {
         if(liveRealmData!=null) {
@@ -159,12 +216,53 @@ class FragmentContacts: Fragment(), Injectable {
         super.onDestroyView()
     }
 
+    fun onUpdateServerButton(){
+        if(!isServerStarted){
+            severButton!!.setText(R.string.start_server_background)
+        } else{
+            severButton!!.setText(R.string.stop_server_background)
+        }
+    }
+
+    fun checkTrackerStatus(){
+        try {
+            val localBroadcastManager = LocalBroadcastManager.getInstance(activity!!)
+            val intentRequest = Intent(Actions.ACTION_TRACKER_STATUS_REQUEST)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
+
+    fun startTracker(){
+        try {
+            val localBroadcastManager = LocalBroadcastManager.getInstance(activity!!)
+            val intentRequest = Intent(Actions.ACTION_START_TRACKER)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
+
+    fun stopTracker(){
+        try {
+            val localBroadcastManager = LocalBroadcastManager.getInstance(activity!!)
+            val intentRequest = Intent(Actions.ACTION_STOP_TRACKER)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+    }
+
+
     interface OnListFragmentInteractionListener {
         fun onSelected(contact: CovidContact)
     }
 
     companion object {
         private val TAG = FragmentContacts::class.java.simpleName
+        val KEY_IS_SERVER_STARTED="KEY_IS_SERVER_STARTED"
+
         fun newInstance(): FragmentContacts {
             val fragment = FragmentContacts()
             val arguments = Bundle()

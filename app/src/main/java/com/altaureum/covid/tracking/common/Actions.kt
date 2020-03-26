@@ -2,11 +2,27 @@ package com.altaureum.covid.tracking.common
 
 object Actions {
     /**
+     * General
+     */
+
+    val ACTION_START_TRACKER="com.altaureum.covid.tracking.common.action.START_TRACKER"
+    val ACTION_STOP_TRACKER="com.altaureum.covid.tracking.common.action.STOP_TRACKER"
+    val ACTION_TRACKER_STATUS_REQUEST="com.altaureum.covid.tracking.common.action.TRACKER_STATUS_REQUEST"
+
+
+    val ACTION_TRACKER_STATUS_RESPONSE="com.altaureum.covid.tracking.common.action.TRACKER_STATUS_RESPONSE"
+
+
+    val ACTION_TRACKER_STARTED="com.altaureum.covid.tracking.common.action.TRACKER_STARTED"
+    val ACTION_TRACKER_STOPPED="com.altaureum.covid.tracking.common.action.TRACKER_STOPPED"
+
+    /**
      * Request Actions BLE Server
      */
     val ACTION_START_BLE_SERVER="com.altaureum.covid.tracking.common.action.START_BLE_SERVER"
     val ACTION_RESTART_BLE_SERVER="com.altaureum.covid.tracking.common.action.RESTART_BLE_SERVER"
     val ACTION_STOP_BLE_SERVER="com.altaureum.covid.tracking.common.action.STOP_BLE_SERVER"
+    val ACTION_BLE_SERVER_CHECK_STATUS="com.altaureum.covid.tracking.common.action.BLE_SERVER_CHECK_STATUS"
     val ACTION_SEND_MESSAGE_SERVER="com.altaureum.covid.tracking.common.action.SEND_MESSAGE_SERVER"
 
     /**
@@ -22,11 +38,13 @@ object Actions {
     val ACTION_ERROR_BLE_ADVERTISMENT_NOT_SUPPORTED="com.altaureum.covid.tracking.common.action.ERROR_BLE_ADVERTISMENT_NOT_SUPPORTED"
     val ACTION_ERROR_BLE_ADVERTISMENT_FAILED="com.altaureum.covid.tracking.common.action.ERROR_BLE_ADVERTISMENT_FAILED"
 
+
     val ACTION_BLE_SERVER_DEVICE_ADDED="com.altaureum.covid.tracking.common.action.BLE_SERVER_DEVICE_ADDED"
     val ACTION_BLE_SERVER_DEVICE_REMOVED="com.altaureum.covid.tracking.common.action.BLE_SERVER_DEVICE_REMOVED"
     val ACTION_BLE_SERVER_MESSAGE_RECEIVED="com.altaureum.covid.tracking.common.action.BLE_SERVER_MESSAGE_RECEIVED"
     val ACTION_BLE_SERVER_NOTIFICATION_SENT="com.altaureum.covid.tracking.common.action.BLE_SERVER_NOTIFICATION_SENT"
-
+    val ACTION_BLE_SERVER_CHECK_STATUS_RESPONSE="com.altaureum.covid.tracking.common.action.BLE_SERVER_CHECK_STATUS_RESPONSE"
+    val ACTION_BLE_SERVER_ERROR="com.altaureum.covid.tracking.common.action.BLE_SERVER_ERROR"
 
     /**
      * Request Actions BLE Client
@@ -56,4 +74,14 @@ object Actions {
     val ACTION_BLE_LIGHT_CLIENT_SCAN_FAILED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_CLIENT_SCAN_FAILED"
     val ACTION_BLE_LIGHT_DEVICE_ADDED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_DEVICE_ADDED"
     val ACTION_BLE_LIGHT_DEVICE_LIGHT_REMOVED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_DEVICE_LIGHT_REMOVED"
+
+
+    /**
+     * Request Actions BLE Client
+     */
+    val ACTION_BLE_CLIENT_SCAN_STARTED="com.altaureum.covid.tracking.common.action.BLE_CLIENT_SCAN_STARTED"
+    val ACTION_BLE_CLIENT_SCAN_STOPED="com.altaureum.covid.tracking.common.action.BLE_CLIENT_SCAN_STOPED"
+    val ACTION_BLE_CLIENT_SCAN_FAILED="com.altaureum.covid.tracking.common.action.BLE_CLIENT_SCAN_FAILED"
+    val ACTION_BLE_CLIENT_DEVICE_ADDED="com.altaureum.covid.tracking.common.action.CLIENT_DEVICE_ADDED"
+    val ACTION_BLE_CLIENT_DEVICE_REMOVED="com.altaureum.covid.tracking.common.action.BLE_CLIENT_DEVICE_REMOVED"
 }

@@ -1,28 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/layoutContainer"
-        android:layout_alignParentTop="true"
-        android:orientation="vertical"
-        android:background="@android:color/white"
-        android:padding="16dp"
-        >
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/layoutContainer"
+    android:layout_alignParentTop="true"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:padding="16dp">
 
         <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/valueId"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                style="@style/TextAppearance.AppCompat.Headline"
-                android:text="@string/app_name"
-        />
+            android:id="@+id/valueId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/TextAppearance.AppCompat.Headline"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            android:text="@string/app_name"
+            />
         <androidx.appcompat.widget.AppCompatTextView
-                android:id="@+id/valueTime"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:maxLines="2"
-                style="@style/TextAppearance.AppCompat.Body2"
-                android:text="@string/no_data_available"
-        />
-</LinearLayout>
+            android:id="@+id/valueTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/valueId"
+            app:layout_constraintStart_toStartOf="@+id/valueId"
+            android:text="@string/no_data_available"
+            />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/contactTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/valueTime"
+            app:layout_constraintStart_toStartOf="@+id/valueId"
+            android:text="@string/contact_time"
+            />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/contactDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/valueTime"
+            app:layout_constraintStart_toEndOf="@+id/contactTime"
+            android:paddingStart="24dp"
+            android:text="@string/last_distance"
+            android:visibility="invisible"
+            />
+</androidx.constraintlayout.widget.ConstraintLayout>

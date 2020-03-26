@@ -14,9 +14,12 @@ class CovidContactDao(val realm: Realm) {
     private fun getBaseSync(realm: Realm = this.realm,
                 covidId: String?=null,
                 numberOfResults:Long=-1,
-                fromDate: Date? = null,
-                toDate: Date?=null,
-                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                fromContactDate: Date? = null,
+                toContactDate: Date?=null,
+                fromLastContactDate: Date? = null,
+                toLastContactDate: Date?=null,
+                minimumContactTimeInSeconds:Long=-1,
+                fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                 sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
         val query = realm.where(CovidContact::class.java)
 
@@ -24,44 +27,75 @@ class CovidContactDao(val realm: Realm) {
             query.limit(numberOfResults)
         }
        // query.beginGroup()
-        if (fromDate!=null) {
+        if (fromContactDate!=null) {
             query.and()
-            query.lessThanOrEqualTo("contactDate", fromDate)
+            query.greaterThanOrEqualTo("firstContactDate", fromContactDate)
         }
-        if (toDate!=null) {
+        if (toContactDate!=null) {
             query.and()
-            query.greaterThanOrEqualTo("contactDate", toDate)
+            query.lessThanOrEqualTo("firstContactDate", toContactDate)
+        }
+
+        if (fromLastContactDate!=null) {
+            query.and()
+            query.greaterThanOrEqualTo("lastContactDate", fromLastContactDate)
+        }
+        if (toLastContactDate!=null) {
+            query.and()
+            query.lessThanOrEqualTo("lastContactDate", toLastContactDate)
         }
 
         if (covidId!=null) {
             query.and().equalTo("covidId", covidId, Case.INSENSITIVE)
+        }
+
+        if(minimumContactTimeInSeconds>-1){
+            query.and()
+            query.greaterThanOrEqualTo("contactTimeInSeconds", minimumContactTimeInSeconds)
         }
         //query.endGroup()
         return query.sort(fieldNames, sortOrders)
     }
 
     private fun getBaseSync(realm: Realm = this.realm,
-                    covidIds: Array<String>?=null,
-                    numberOfResults:Long=-1,
-                    fromDate: Date? = null,
-                    toDate: Date?=null,
-                    fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
-                    sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
+                            covidIds: Array<String>?=null,
+                            numberOfResults:Long=-1,
+                            fromContactDate: Date? = null,
+                            toContactDate: Date?=null,
+                            fromLastContactDate: Date? = null,
+                            toLastContactDate: Date?=null,
+                            minimumContactTimeInSeconds:Long=-1,
+                            fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
+                            sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmQuery<CovidContact> {
         val query = realm.where(CovidContact::class.java)
 
 
        // query.beginGroup()
-        if (fromDate!=null) {
+        if (fromContactDate!=null) {
             query.and()
-            query.lessThanOrEqualTo("contactDate", fromDate)
+            query.greaterThanOrEqualTo("firstContactDate", fromContactDate)
         }
-        if (toDate!=null) {
+        if (toContactDate!=null) {
             query.and()
-            query.greaterThanOrEqualTo("contactDate", toDate)
+            query.lessThanOrEqualTo("firstContactDate", toContactDate)
+        }
+
+        if (fromLastContactDate!=null) {
+            query.and()
+            query.greaterThanOrEqualTo("lastContactDate", fromLastContactDate)
+        }
+        if (toLastContactDate!=null) {
+            query.and()
+            query.lessThanOrEqualTo("lastContactDate", toLastContactDate)
         }
 
         if (covidIds!=null) {
             query.and().`in`("covidId", covidIds, Case.INSENSITIVE)
+        }
+
+        if(minimumContactTimeInSeconds>-1){
+            query.and()
+            query.greaterThanOrEqualTo("contactTimeInSeconds", minimumContactTimeInSeconds)
         }
         //query.endGroup()
 
@@ -76,61 +110,79 @@ class CovidContactDao(val realm: Realm) {
     fun getSync(realm: Realm = this.realm,
                 covidId: String?=null,
                 numberOfResults:Long=-1,
-                fromDate: Date? = null,
-                toDate: Date?=null,
-                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                fromContactDate: Date? = null,
+                toContactDate: Date?=null,
+                fromLastContactDate: Date? = null,
+                toLastContactDate: Date?=null,
+                minimumContactTimeInSeconds:Long=-1,
+                fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                 sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
-        return getBaseSync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAll()
+        return getBaseSync(realm, covidId, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).findAll()
     }
 
     fun getSync(realm: Realm = this.realm,
                 covidIds: Array<String>?=null,
                 numberOfResults:Long=-1,
-                fromDate: Date? = null,
-                toDate: Date?=null,
-                fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                fromContactDate: Date? = null,
+                toContactDate: Date?=null,
+                fromLastContactDate: Date? = null,
+                toLastContactDate: Date?=null,
+                minimumContactTimeInSeconds:Long=-1,
+                fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                 sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
-        return getBaseSync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAll()
+        return getBaseSync(realm, covidIds, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).findAll()
     }
 
     fun getAsync(realm: Realm = this.realm,
                      covidIds: Array<String>?=null,
                      numberOfResults:Long=-1,
-                     fromDate: Date? = null,
-                     toDate: Date?=null,
-                     fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                     fromContactDate: Date? = null,
+                     toContactDate: Date?=null,
+                     fromLastContactDate: Date? = null,
+                     toLastContactDate: Date?=null,
+                    minimumContactTimeInSeconds:Long=-1,
+                     fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                      sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
-        return getBaseSync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAllAsync()
+        return getBaseSync(realm, covidIds, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).findAllAsync()
     }
 
     fun getAsync(realm: Realm = this.realm,
                 covidId: String?=null,
                 numberOfResults:Long=-1,
-                fromDate: Date? = null,
-                toDate: Date?=null,
-                 fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                 fromContactDate: Date? = null,
+                 toContactDate: Date?=null,
+                 fromLastContactDate: Date? = null,
+                 toLastContactDate: Date?=null,
+                 minimumContactTimeInSeconds:Long=-1,
+                 fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                  sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): RealmResults<CovidContact> {
-        return getBaseSync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).findAllAsync()
+        return getBaseSync(realm, covidId, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).findAllAsync()
     }
 
     fun getAsyncAsLiveData(realm: Realm = this.realm,
                  covidIds: Array<String>?=null,
                  numberOfResults:Long=-1,
-                 fromDate: Date? = null,
-                 toDate: Date?=null,
-                 fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                   fromContactDate: Date? = null,
+                   toContactDate: Date?=null,
+                   fromLastContactDate: Date? = null,
+                   toLastContactDate: Date?=null,
+                   minimumContactTimeInSeconds:Long=-1,
+                 fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                  sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): LiveRealmData<CovidContact> {
-        return getAsync(realm, covidIds, numberOfResults, fromDate, toDate, fieldNames, sortOrders).asLiveData()
+        return getAsync(realm, covidIds, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).asLiveData()
     }
 
     fun getAsyncAsLiveData(realm: Realm = this.realm,
                  covidId: String?=null,
                  numberOfResults:Long=-1,
-                 fromDate: Date? = null,
-                 toDate: Date?=null,
-                   fieldNames: Array<String>? = arrayOf("contactDate", "covidId"),
+                   fromContactDate: Date? = null,
+                   toContactDate: Date?=null,
+                   fromLastContactDate: Date? = null,
+                   toLastContactDate: Date?=null,
+                   minimumContactTimeInSeconds:Long=-1,
+                   fieldNames: Array<String>? = arrayOf("firstContactDate", "covidId"),
                    sortOrders: Array<Sort>? = arrayOf(Sort.DESCENDING, Sort.DESCENDING)): LiveRealmData<CovidContact> {
-        return getAsync(realm, covidId, numberOfResults, fromDate, toDate, fieldNames, sortOrders).asLiveData()
+        return getAsync(realm, covidId, numberOfResults, fromContactDate, toContactDate, fromLastContactDate, toLastContactDate, minimumContactTimeInSeconds, fieldNames, sortOrders).asLiveData()
     }
 
 
@@ -168,6 +220,16 @@ class CovidContactDao(val realm: Realm) {
         }.toSingleDefault(true)
                 .onErrorReturnItem(false)
     }
+
+    //TODO Improve update
+    fun updateSync(covidContact: CovidContact) {
+        realm.executeTransaction {
+            val realmResults = it.where(CovidContact::class.java).equalTo("uuid", covidContact.uuid, Case.INSENSITIVE).findAll()
+            realmResults.deleteAllFromRealm()
+            it.insertOrUpdate(covidContact)
+        }
+    }
+
 
     fun updateSync(uuids: Array<String>, uploadStatus: CovidContact.Upload_Status) {
         realm.executeTransaction {
@@ -303,7 +365,7 @@ class CovidContactDao(val realm: Realm) {
     fun deleteAllBefore(date: Date) {
         realm.executeTransaction {
             val results = it.where(CovidContact::class.java)
-                    .lessThanOrEqualTo("contactDate", date)
+                    .lessThanOrEqualTo("firstContactDate", date)
                     .findAll()
             results.deleteAllFromRealm()
 

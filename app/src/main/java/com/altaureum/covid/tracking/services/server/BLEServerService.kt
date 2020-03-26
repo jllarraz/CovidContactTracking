@@ -8,6 +8,7 @@ import android.bluetooth.le.AdvertiseSettings
 import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.*
@@ -20,14 +21,23 @@ import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.realm.data.CovidContact
+import com.altaureum.covid.tracking.realm.data.LocationCovidContact
 import com.altaureum.covid.tracking.realm.utils.RealmUtils
 import com.altaureum.covid.tracking.realm.utils.covidContacts
+import com.altaureum.covid.tracking.services.data.ChunkMessage
+import com.altaureum.covid.tracking.services.data.ChunkHeader
+import com.altaureum.covid.tracking.services.data.CovidMessage
+import com.altaureum.covid.tracking.services.data.DeviceSignal
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
+import com.google.gson.Gson
+import io.realm.Sort
 import java.lang.Exception
 
 import java.util.*
+import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
 
 class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 
@@ -87,6 +97,9 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
             Actions.ACTION_STOP_BLE_SERVER->{
                fullStopServer()
             }
+            Actions.ACTION_BLE_SERVER_CHECK_STATUS->{
+                sendResponseCheckStatus()
+            }
             Actions.ACTION_SEND_MESSAGE_SERVER->{
                 try {
                     if(intent.hasExtra(IntentData.KEY_DATA)) {
@@ -97,6 +110,16 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                 }
             }
 
+        }
+    }
+
+    fun sendResponseCheckStatus(){
+        try {
+            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_CHECK_STATUS_RESPONSE)
+            intentRequest.putExtra(IntentData.KEY_DATA, isServerStarted)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
         }
     }
 
@@ -117,6 +140,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 */
             try {
                 val intentRequest = Intent(Actions.ACTION_REQUEST_BLE_ENABLE)
+                intentRequest.setFlags( FLAG_ACTIVITY_NEW_TASK)
                 startActivity(intentRequest)
             }catch (e:Exception){
                 e.printStackTrace()
@@ -155,13 +179,23 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     }
 
     fun fullStartSever(){
-        setupGattServer()
-        startAdvertising()
         try {
-            val intentRequest = Intent(Actions.ACTION_BLE_SERVER_STARTED)
-            localBroadcastManager.sendBroadcast(intentRequest)
+            setupGattServer()
+            startAdvertising()
+            try {
+                val intentRequest = Intent(Actions.ACTION_BLE_SERVER_STARTED)
+                localBroadcastManager.sendBroadcast(intentRequest)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }catch (e:Exception){
-            e.printStackTrace()
+            try {
+                val intentRequest = Intent(Actions.ACTION_BLE_SERVER_ERROR)
+                intentRequest.putExtra(IntentData.KEY_DATA, e.toString())
+                localBroadcastManager.sendBroadcast(intentRequest)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -180,14 +214,17 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     private fun setupGattServer() {
         val service = BluetoothGattService(
             serviceUUID,
-                BluetoothGattService.SERVICE_TYPE_PRIMARY)
+            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        )
         // Write characteristic
-        val writeCharacteristic = BluetoothGattCharacteristic(Constants.CHARACTERISTIC_ECHO_UUID,
-                BluetoothGattCharacteristic.PROPERTY_WRITE,  // Somehow this is not necessary, the client can still enable notifications
+        val writeCharacteristic = BluetoothGattCharacteristic(
+            Constants.CHARACTERISTIC_ECHO_UUID,
+            BluetoothGattCharacteristic.PROPERTY_WRITE,  // Somehow this is not necessary, the client can still enable notifications
 //                        | BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_WRITE)
+            BluetoothGattCharacteristic.PERMISSION_WRITE
+        )
         service.addCharacteristic(writeCharacteristic)
-        mGattServer!!.addService(service)
+        mGattServer?.addService(service)
         isServerStarted = true
     }
 
@@ -277,8 +314,8 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
         mHandler!!.post { mDevices!!.remove(device) }
     }
 
-    fun sendResponse(device: BluetoothDevice?, requestId: Int, status: Int, offset: Int, value: ByteArray?) {
-        mHandler!!.post { mGattServer!!.sendResponse(device, requestId, status, 0, null) }
+    fun sendResponse(device: BluetoothDevice?, requestId: Int, status: Int, offset: Int=0, value: ByteArray?=null) {
+        mHandler!!.post { mGattServer!!.sendResponse(device, requestId, status, offset, value) }
     }
 
     private fun sendReverseMessage(message: ByteArray) {
@@ -286,7 +323,11 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
         sendMessage(response)
     }
     private fun sendMessage(message: String) {
-        sendMessage(StringUtils.bytesFromString(message))
+        //sendMessage(StringUtils.bytesFromString(message))
+    }
+
+    private fun sendMessage(device: BluetoothDevice?, requestId: Int, status: Int, message: String) {
+        sendResponse(device, requestId, status, 0, StringUtils.bytesFromString(message))
     }
 
     private fun sendMessage(message: ByteArray) {
@@ -311,13 +352,44 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
             characteristic.value = value
             val confirm = BluetoothUtils.requiresConfirmation(characteristic)
             for (device in mDevices!!) {
-                mGattServer!!.notifyCharacteristicChanged(device, characteristic, confirm)
+                val notifyCharacteristicChanged =
+                    mGattServer!!.notifyCharacteristicChanged(device, characteristic, confirm)
+
             }
         }
     }
 
     // Gatt Callback
     private inner class gattServerCallback : BluetoothGattServerCallback() {
+        private var mDevicesSignal: MutableMap<String, DeviceSignal> = HashMap()
+        private var mChunkMessages: MutableMap<String, ChunkMessage> = HashMap()
+
+        override fun onPhyUpdate(device: BluetoothDevice?, txPhy: Int, rxPhy: Int, status: Int) {
+            if(status == BluetoothGatt.GATT_SUCCESS){
+                val address = device?.address!!
+                if(mDevicesSignal.containsKey(address)){
+                    mDevicesSignal.get(address)!!.txPower = txPhy
+                }else{
+                    val deviceSignal = DeviceSignal()
+                    deviceSignal.txPower = txPhy
+                    mDevicesSignal.put(address, deviceSignal)
+                }
+            }
+        }
+
+        override fun onPhyRead(device: BluetoothDevice?, txPhy: Int, rxPhy: Int, status: Int) {
+            if(status == BluetoothGatt.GATT_SUCCESS){
+                val address = device?.address!!
+                if(mDevicesSignal.containsKey(address)){
+                    mDevicesSignal.get(address)!!.txPower = txPhy
+                }else{
+                    val deviceSignal = DeviceSignal()
+                    deviceSignal.txPower = txPhy
+                    mDevicesSignal.put(address, deviceSignal)
+                }
+            }
+        }
+
         override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
             super.onConnectionStateChange(device, status, newState)
             Log.d(TAG, "onConnectionStateChange " + device.address
@@ -326,6 +398,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 addDevice(device)
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                mDevicesSignal.remove(device.address)
                 removeDevice(device)
             }
         }
@@ -347,6 +420,9 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
 
         // The Gatt will reject Characteristic Write requests that do not have the permission set,
 // so there is no need to check inside the callback
+
+
+
         override fun onCharacteristicWriteRequest(device: BluetoothDevice,
                                                   requestId: Int,
                                                   characteristic: BluetoothGattCharacteristic,
@@ -361,10 +437,39 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                     responseNeeded,
                     offset,
                     value)
+            val message = String(value)
             Log.d(TAG, "onCharacteristicWriteRequest" + characteristic.uuid.toString()
-                    + "\nReceived: " + StringUtils.byteArrayInHexFormat(value))
+                    + "\nReceived: " + StringUtils.byteArrayInHexFormat(value)+"\nPartial Message: "+ message
+            )
             if (Constants.CHARACTERISTIC_ECHO_UUID == characteristic.uuid) {
                 sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+                var isChunkPackageHeader=false
+                val address1 = device.address
+                if(message.contains("packets")) isChunkPackageHeader =true else isChunkPackageHeader=false
+                if(isChunkPackageHeader){
+                    try{
+                        val chunkHeader = Gson().fromJson(message, ChunkHeader::class.java)
+                        val chunkMessage = ChunkMessage()
+                        chunkMessage.packets=chunkHeader.packets
+                        mChunkMessages.put(address1, chunkMessage)
+                    }catch (e:Exception){
+                    }
+                    //is the chunk header
+                    return
+                }
+
+                if(mChunkMessages.containsKey(address1)) {
+                    val chunkMessage = mChunkMessages.get(address1)
+                    chunkMessage!!.chunks.add(message)
+                    if(chunkMessage!!.chunks.size != chunkMessage.packets){
+                        //waiting for new messages
+                        return
+                    }
+                }
+                val message = mChunkMessages.get(address1).toString()
+                mChunkMessages.remove(address1)
+
+
                 try {
                     val intentRequest = Intent(Actions.ACTION_BLE_SERVER_MESSAGE_RECEIVED)
                     intentRequest.putExtra(IntentData.KEY_DATA, value)
@@ -372,13 +477,18 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                 }catch (e:Exception){
                     e.printStackTrace()
                 }
+
+
                 //Send info Back to sender
                 val defaultSharedPreferences =
                     PreferenceManager.getDefaultSharedPreferences(applicationContext)
                 val covidId = defaultSharedPreferences.getString(Preferences.KEY_COVID_ID, "")!!
                 //We notify all the clients our COVID ID
                 sendMessage(covidId)
-                onMessageReceived(value, device)
+                //sendMessage(device, requestId, BluetoothGatt.GATT_SUCCESS, covidJsonMessage)
+                onMessageReceived(message, device)
+            }else{
+                sendResponse(device, requestId, BluetoothGatt.GATT_FAILURE, 0, null)
             }
         }
 
@@ -394,19 +504,99 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
         }
     }
 
-    fun onMessageReceived(message: ByteArray, bluetoothDevice: BluetoothDevice){
-        Log.d(TAG, "Message Received: "+String(message))
-        val covidContact = CovidContact()
-        covidContact.covidId=String(message)
-        covidContact.contactDate=Date()
+    fun onMessageReceived(message: String, bluetoothDevice: BluetoothDevice){
+        Log.d(TAG, "Full Message Received: "+message)
+
+        var covidMessage:CovidMessage?=null
+        try {
+             covidMessage = Gson().fromJson(message, CovidMessage::class.java)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
+
+        if(covidMessage == null){
+            return
+        }
+
         val realm = RealmUtils.getInstance(context!!)
-        realm!!.covidContacts().putSync(covidContact)
-        realm.close()
+
+
+        val timeSinceLastTime = Calendar.getInstance()
+        timeSinceLastTime.add(Calendar.SECOND, - TIME_TO_UPDATE_SECONDS)
+        val time = timeSinceLastTime.time
+
+        val contactsSinceLastTime = realm?.covidContacts()
+            ?.getSync(covidId = covidMessage.covidId, fromLastContactDate = time, fieldNames = arrayOf("lastContactDate", "covidId"), sortOrders = arrayOf(
+                Sort.DESCENDING, Sort.DESCENDING))
+
+
+
+        var covidContact:CovidContact?
+
+        val date = Date()
+        if(contactsSinceLastTime.isNullOrEmpty()){
+            Log.d(TAG, "No contact in DB for id: "+covidMessage.covidId)
+            //There is no contact, so we create one
+            covidContact = CovidContact()
+            covidContact.covidId = covidMessage.covidId
+            covidContact.firstContactDate = date
+            covidContact.lastContactDate = date
+            covidContact.contactTimeInSeconds = 0
+
+            val locationCovidContact = LocationCovidContact()
+
+            locationCovidContact.latitude = 0.0
+            locationCovidContact.longitude = 0.0
+            locationCovidContact.date = date
+
+            if(covidMessage.deviceSignal!=null) {
+                locationCovidContact.calculatedDistance =
+                    BluetoothUtils.calculateAccuracy(
+                        covidMessage.deviceSignal!!.txPower,
+                        covidMessage.deviceSignal!!.rssi
+                    )
+                locationCovidContact.rssi = covidMessage.deviceSignal!!.rssi
+                locationCovidContact.txPower = covidMessage.deviceSignal!!.txPower
+            }
+            covidContact.locations?.add(locationCovidContact)
+            realm?.covidContacts()?.putAsync(covidContact)
+        } else {
+
+            covidContact = realm!!.copyFromRealm(contactsSinceLastTime.first()!!)
+            Log.d(TAG, "Contact exist in DB for id: "+covidMessage.covidId)
+            val secondsSinceLastUpdate =
+                TimeUnit.MILLISECONDS.toSeconds(date.time - covidContact.lastContactDate!!.time)
+            Log.d(TAG, "Contact was seen: "+secondsSinceLastUpdate+" seconds ago")
+
+                Log.d(TAG, "We try to update contact: "+covidContact.covidId)
+                // we update the contact and add a new location
+                covidContact?.lastContactDate = date
+
+                covidContact.contactTimeInSeconds = TimeUnit.MILLISECONDS.toSeconds(covidContact.lastContactDate!!.time - covidContact.firstContactDate!!.time)
+
+                val locationCovidContact = LocationCovidContact()
+                if(covidMessage.deviceSignal!=null) {
+                    locationCovidContact.calculatedDistance =
+                        BluetoothUtils.calculateAccuracy(
+                            covidMessage.deviceSignal!!.txPower,
+                            covidMessage.deviceSignal!!.rssi
+                        )
+                    locationCovidContact.rssi = covidMessage.deviceSignal!!.rssi
+                    locationCovidContact.txPower = covidMessage.deviceSignal!!.txPower
+                }
+                locationCovidContact.date = date
+                covidContact?.locations?.add(locationCovidContact)
+                realm?.covidContacts()?.updateSync(covidContact)
+
+        }
+        realm?.close()
 
 
     }
 
     companion object{
         val TAG = BLEServerService::class.java.simpleName
+        val TIME_TO_UPDATE_SECONDS=60
+
     }
 }

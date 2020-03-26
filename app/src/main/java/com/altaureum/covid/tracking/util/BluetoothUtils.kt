@@ -97,4 +97,11 @@ object BluetoothUtils {
         }
         return false
     }
+
+    fun calculateAccuracy(txPower: Int, rssi: Int): Double {
+        if (rssi == 0) {
+            return -1.0 // if we cannot determine accuracy, return -1.
+        }
+        return Math.pow(10.0, (txPower.toDouble() - rssi) / (10 * 2))
+    }
 }

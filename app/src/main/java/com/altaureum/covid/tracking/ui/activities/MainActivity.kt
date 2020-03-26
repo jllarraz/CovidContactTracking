@@ -12,8 +12,10 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.altaureum.covid.tracking.MyApplication
+import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
 
 import com.altaureum.covid.tracking.common.Preferences
@@ -72,8 +74,7 @@ class MainActivity : AppCompatActivity(), HasAndroidInjector {
                 when(resultCode){
                     Activity.RESULT_OK->{
                         //We start the server as we have an Id
-                        (applicationContext as MyApplication).startServer()
-                        (applicationContext as MyApplication).startClient()
+                        startTracker()
                         openContactList()
                     }
                 }
@@ -84,6 +85,16 @@ class MainActivity : AppCompatActivity(), HasAndroidInjector {
         }
         super.onActivityResult(requestCode, resultCode, data)
 
+    }
+
+    fun startTracker(){
+        try {
+            val localBroadcastManager = LocalBroadcastManager.getInstance(this)
+            val intentRequest = Intent(Actions.ACTION_START_TRACKER)
+            localBroadcastManager.sendBroadcast(intentRequest)
+        }catch (e:Exception){
+            e.printStackTrace()
+        }
     }
 
     companion object{

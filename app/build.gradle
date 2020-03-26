@@ -67,5 +67,8 @@ dependencies {
     // if you use the support libraries
     kapt "com.google.dagger:dagger-android-processor:2.25.2"
 
+    //GSON
+    implementation 'com.google.code.gson:gson:2.8.5'
+
 
 }

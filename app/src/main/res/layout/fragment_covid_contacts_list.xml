@@ -13,6 +13,13 @@
             android:layout_height="match_parent"
             >
 
+        <androidx.constraintlayout.widget.Guideline
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/guideline"
+            app:layout_constraintGuide_percent="0.5"
+            android:orientation="vertical"/>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/list"
             android:layout_width="match_parent"
@@ -21,8 +28,28 @@
             android:clipChildren="false"
             app:layoutManager="LinearLayoutManager"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/severButton"
             tools:listitem="@layout/row_covid_contact" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/severButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/start_server_background"
+            app:layout_constraintBottom_toTopOf="@+id/deleteDb"
+            android:layout_marginBottom="5dp"
+            />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/deleteDb"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="@string/deleteButton"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_marginEnd="5dp"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
 
 
         <include layout="@layout/layout_empty"

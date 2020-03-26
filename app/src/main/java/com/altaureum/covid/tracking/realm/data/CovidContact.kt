@@ -6,20 +6,23 @@ import io.realm.RealmList
 import io.realm.RealmObject
 import io.realm.annotations.PrimaryKey
 import java.util.*
+import kotlin.collections.ArrayList
 
 open class CovidContact:Parcelable, RealmObject {
 
     @PrimaryKey
     var uuid: String = UUID.randomUUID().toString()
-    var contactDate: Date? = null
-    var latitude = 0.0
-    var longitude = 0.0
-    var calculatedDistance = 0.0
+    var firstContactDate: Date? = null
+    var lastContactDate: Date? = null
+    var locations:RealmList<LocationCovidContact>?=null
+
     var covidId: String? = null
     var uploadStatus: String = Upload_Status.NOT_UPLOADED.name
 
     var keyword: String? = null
     var uploadingAttemptDate: Date? = null
+    //Jus for convenience in DB
+    var contactTimeInSeconds:Long=0
 
     val uploadStatusEnum:Upload_Status
         get() {
@@ -31,8 +34,11 @@ open class CovidContact:Parcelable, RealmObject {
         }
 
     constructor() {
-        contactDate = Date()
+        firstContactDate = Date()
+        lastContactDate = Date()
         uploadStatus = Upload_Status.NOT_UPLOADED.name
+        locations = RealmList()
+        contactTimeInSeconds=0
     }
 
 
@@ -40,15 +46,20 @@ open class CovidContact:Parcelable, RealmObject {
         this.covidId = covidId
     }
 
-    constructor(vehicle: CovidContact):this() {
-        this.contactDate = if(vehicle.contactDate!=null) Date(vehicle.contactDate!!.time) else null
-        this.latitude = vehicle.latitude
-        this.longitude = vehicle.longitude
-        this.covidId = vehicle.covidId
+    constructor(covidContact: CovidContact):this() {
+        this.firstContactDate = if(covidContact.firstContactDate!=null) Date(covidContact.firstContactDate!!.time) else null
+        this.lastContactDate = if(covidContact.lastContactDate!=null) Date(covidContact.lastContactDate!!.time) else null
+        if(covidContact.locations!=null){
+            for (location in covidContact.locations!!){
+                this.locations!!.add(LocationCovidContact(location))
+            }
+        }
+        this.covidId = covidContact.covidId
 
-        this.uploadStatus = vehicle.uploadStatus
-        this.keyword = vehicle.keyword
-        this.uploadingAttemptDate = if(vehicle.uploadingAttemptDate!=null) Date(vehicle.uploadingAttemptDate!!.time) else null
+        this.uploadStatus = covidContact.uploadStatus
+        this.keyword = covidContact.keyword
+        this.uploadingAttemptDate = if(covidContact.uploadingAttemptDate!=null) Date(covidContact.uploadingAttemptDate!!.time) else null
+        this.contactTimeInSeconds = covidContact.contactTimeInSeconds
     }
     enum class Upload_Status{
         NOT_UPLOADED,
@@ -58,14 +69,18 @@ open class CovidContact:Parcelable, RealmObject {
 
     constructor(input: Parcel):this() {
         this.uuid = if (input.readInt() == 1) input.readString()!! else UUID.randomUUID().toString()
-        this.contactDate = if (input.readInt() == 1) Date(input.readLong()) else Date()
-        this.latitude = input.readDouble()
-        this.longitude = input.readDouble()
-        this.longitude = input.readDouble()
+        this.firstContactDate = if (input.readInt() == 1) Date(input.readLong()) else Date()
+        this.lastContactDate = if (input.readInt() == 1) Date(input.readLong()) else Date()
+
+        if(input.readInt() ==  1){
+            val temp = input.readArrayList(LocationCovidContact::class.java.classLoader)
+            (locations as RealmList<LocationCovidContact>).addAll((temp as ArrayList<LocationCovidContact>).toTypedArray())
+        }
         this.covidId = if (input.readInt() == 1) input.readString() else null
         this.uploadStatus = if (input.readInt() == 1) input.readString()!! else Upload_Status.NOT_UPLOADED.name
         this.keyword = if (input.readInt() == 1) input.readString() else null
         this.uploadingAttemptDate = if (input.readInt() == 1) Date(input.readLong()) else Date()
+        this.contactTimeInSeconds=input.readLong()
     }
 
     override fun describeContents(): Int {
@@ -78,14 +93,20 @@ open class CovidContact:Parcelable, RealmObject {
             dest.writeString(uuid)
         }
 
-        dest.writeInt(if (this.contactDate != null) 1 else 0)
-        if (contactDate != null) {
-            dest.writeLong(contactDate!!.time)
+        dest.writeInt(if (this.firstContactDate != null) 1 else 0)
+        if (firstContactDate != null) {
+            dest.writeLong(firstContactDate!!.time)
         }
 
-        dest.writeDouble(latitude)
-        dest.writeDouble(longitude)
-        dest.writeDouble(calculatedDistance)
+        dest.writeInt(if (this.lastContactDate != null) 1 else 0)
+        if (lastContactDate != null) {
+            dest.writeLong(lastContactDate!!.time)
+        }
+
+        dest.writeInt(if (this.locations != null) 1 else 0)
+        if (locations != null) {
+            dest.writeList(locations as List<LocationCovidContact>)
+        }
 
         dest.writeInt(if (this.covidId != null) 1 else 0)
         if (covidId != null) {
@@ -107,6 +128,8 @@ open class CovidContact:Parcelable, RealmObject {
         if (uploadingAttemptDate != null) {
             dest.writeLong(uploadingAttemptDate!!.time)
         }
+
+        dest.writeLong(contactTimeInSeconds)
     }
 
 

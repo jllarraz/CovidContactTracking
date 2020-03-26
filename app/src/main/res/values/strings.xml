@@ -5,6 +5,9 @@
 
     <string name="server">Server</string>
     <string name="client">Client</string>
+    <string name="deleteButton">Delete Db</string>
+    <string name="exportButton">Export Db</string>
+
     <string name="start_server_background">Start Server Background</string>
     <string name="stop_server_background">Stop Server Background</string>
     <string name="start_client_background">Start Client Background</string>
@@ -51,6 +54,7 @@
     <string name="permission_title">"Permission required"</string>
     <string name="permission_message_after_deny">"You did not give the app permission for Location. Please set these permissions manually in Settings > Apps > Covid Tracking > Permissions"</string>
 
-
+    <string name="contact_time">Contact time: %1d seconds</string>
+    <string name="last_distance">Distance: %1.2f meters</string>
 
 </resources>

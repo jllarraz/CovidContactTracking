@@ -24,15 +24,6 @@
         </activity>
 
         <activity
-            android:name=".ui.activities.server.ServerActivity"
-            android:label="@string/bluetooth_server"/>
-
-        <activity
-            android:name=".ui.activities.client.ClientActivity"
-            android:label="@string/bluetooth_client"
-            android:windowSoftInputMode="stateHidden"/>
-
-        <activity
             android:name=".ui.activities.ContactListActivity"
             android:label="@string/contacts_title"
             android:windowSoftInputMode="stateHidden"/>
@@ -72,6 +63,10 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="com.altaureum.covid.tracking.common.action.SEND_MESSAGE_SERVER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.altaureum.covid.tracking.common.action.BLE_SERVER_CHECK_STATUS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
