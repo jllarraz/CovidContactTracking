@@ -2,15 +2,23 @@ package com.altaureum.covid.tracking.services.client
 
 import android.Manifest
 import android.app.IntentService
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.*
 import 	androidx.preference.PreferenceManager
 import android.util.Log
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.altaureum.covid.tracking.MyApplication
+import com.altaureum.covid.tracking.R
 import com.altaureum.covid.tracking.common.Actions
 import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
@@ -18,6 +26,8 @@ import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.services.data.ChunkHeader
 import com.altaureum.covid.tracking.services.data.CovidMessage
 import com.altaureum.covid.tracking.services.data.DeviceSignal
+import com.altaureum.covid.tracking.services.notification.NotificationFactory
+import com.altaureum.covid.tracking.services.server.BLEServerService
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.BluetoothUtils.calculateAccuracy
 import com.altaureum.covid.tracking.util.StringUtils
@@ -26,7 +36,7 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.HashMap
 
-class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
+class BLEClientService: Service() {
 
     private var mAutoScanning = false
     private var mScanning = false
@@ -58,13 +68,33 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
         mLogHandler = Handler(Looper.getMainLooper())
         mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = mBluetoothManager!!.adapter
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundWithNotification()
+        }
+    }
+
+    override fun onDestroy() {
+        stopScan()
+        val notificationManager = MyApplication.context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
+        super.onDestroy()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun startForegroundWithNotification(){
+        startForeground(NotificationFactory.NOTIFICATION_ID, NotificationFactory.getNotification(this))
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        onHandleIntent(intent)
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? {
         return mBinder
     }
 
-    override fun onHandleIntent(intent: Intent?) {
+    fun onHandleIntent(intent: Intent?) {
         when(intent?.action){
             Actions.ACTION_START_BLE_CLIENT->{
                 mAutoScanning = true
@@ -560,7 +590,9 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
         }
     }
 
-
+    override fun unbindService(conn: ServiceConnection) {
+        super.unbindService(conn)
+    }
 
 
 

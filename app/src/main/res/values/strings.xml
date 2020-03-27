@@ -57,4 +57,10 @@
     <string name="contact_time">Contact time: %1d seconds</string>
     <string name="last_distance">Distance: %1.2f meters</string>
 
+    <string name="ble_server_notification">Advertising your Covid Id</string>
+    <string name="ble_client_notification">Tracking Covid id contacs</string>
+
+    <string name="notification_channel_name">Covid</string>
+    <string name="notification_description">Notification channel used by Covid tracking app to report events to the user</string>
+
 </resources>

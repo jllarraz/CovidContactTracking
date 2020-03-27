@@ -1,6 +1,8 @@
 package com.altaureum.covid.tracking.services.server
 
 import android.app.IntentService
+import android.app.NotificationManager
+import android.app.Service
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
 import android.bluetooth.le.AdvertiseData
@@ -13,6 +15,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.*
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.preference.PreferenceManager
 import com.altaureum.covid.tracking.MyApplication.Companion.context
@@ -24,22 +27,21 @@ import com.altaureum.covid.tracking.realm.data.CovidContact
 import com.altaureum.covid.tracking.realm.data.LocationCovidContact
 import com.altaureum.covid.tracking.realm.utils.RealmUtils
 import com.altaureum.covid.tracking.realm.utils.covidContacts
-import com.altaureum.covid.tracking.services.data.ChunkMessage
 import com.altaureum.covid.tracking.services.data.ChunkHeader
+import com.altaureum.covid.tracking.services.data.ChunkMessage
 import com.altaureum.covid.tracking.services.data.CovidMessage
 import com.altaureum.covid.tracking.services.data.DeviceSignal
+import com.altaureum.covid.tracking.services.notification.NotificationFactory
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
 import com.google.gson.Gson
 import io.realm.Sort
-import java.lang.Exception
-
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
-class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
+class BLEServerService: Service() {
 
     private var mHandler: Handler? = null
     private var mLogHandler: Handler? = null
@@ -70,13 +72,30 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
         mDevices = ArrayList()
         mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = mBluetoothManager!!.adapter
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundWithNotification()
+        }
+    }
+
+    override fun onDestroy() {
+        fullStopServer()
+        val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
+        super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? {
         return mBinder
     }
 
-    override fun onHandleIntent(intent: Intent?) {
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun startForegroundWithNotification(){
+        startForeground(NotificationFactory.NOTIFICATION_ID, NotificationFactory.getNotification(this))
+
+    }
+
+    fun onHandleIntent(intent: Intent?) {
         when(intent?.action){
             Actions.ACTION_START_BLE_SERVER->{
                 serviceUUID = UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
@@ -124,11 +143,12 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return super.onStartCommand(intent, flags, startId)
+        onHandleIntent(intent)
+        return START_NOT_STICKY
     }
 
     override fun unbindService(conn: ServiceConnection) {
-        fullStopServer()
+
         super.unbindService(conn)
     }
 
@@ -208,6 +228,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
         }catch (e:Exception){
             e.printStackTrace()
         }
+        stopSelf()
     }
 
     // GattServer
