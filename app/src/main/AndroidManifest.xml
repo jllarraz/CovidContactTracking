@@ -27,7 +27,9 @@
         <activity
             android:name=".ui.activities.ContactListActivity"
             android:label="@string/contacts_title"
-            android:windowSoftInputMode="stateHidden"/>
+            android:windowSoftInputMode="stateHidden"
+            android:launchMode="singleInstance"
+            />
 
         <activity
             android:name=".ui.activities.RegistryActivity"

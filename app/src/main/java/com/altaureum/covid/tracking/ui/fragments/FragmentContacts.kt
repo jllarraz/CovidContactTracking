@@ -218,9 +218,9 @@ class FragmentContacts: Fragment(), Injectable {
 
     fun onUpdateServerButton(){
         if(!isServerStarted){
-            severButton!!.setText(R.string.start_server_background)
+            severButton?.setText(R.string.start_server_background)
         } else{
-            severButton!!.setText(R.string.stop_server_background)
+            severButton?.setText(R.string.stop_server_background)
         }
     }
 

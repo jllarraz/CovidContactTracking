@@ -40,8 +40,8 @@ class BLEClientService: Service() {
 
     private var mAutoScanning = false
     private var mScanning = false
-    private var mHandler: Handler? = null
-    private var mLogHandler: Handler? = null
+    //private var mHandler: Handler? = null
+    //private var mLogHandler: Handler? = null
     private var mScanResults: MutableMap<String, DiscoveredDevice>? = null
     //private var mConnected = false
     //private var mEchoInitialized = false
@@ -61,11 +61,31 @@ class BLEClientService: Service() {
 
     }
 
+    @Volatile
+    private var mHandlerThread: HandlerThread? = null
+    private var mServiceHandler: ServiceHandler? = null
+
+    // Define how the handler will process messages
+    private class ServiceHandler(looper: Looper?) : Handler(looper) {
+        // Define how to handle any incoming messages here
+        override fun handleMessage(message: Message?) {
+            // ...
+            // When needed, stop the service with
+            // stopSelf();
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        // An Android handler thread internally operates on a looper.
+        mHandlerThread = HandlerThread("BLEClientService.HandlerThread")
+        mHandlerThread?.start();
+        // An Android service handler is a handler running on a specific background thread.
+        mServiceHandler = ServiceHandler(mHandlerThread!!.getLooper());
+
         localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
-        mHandler = Handler()
-        mLogHandler = Handler(Looper.getMainLooper())
+
+        localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
         mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = mBluetoothManager!!.adapter
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -74,7 +94,8 @@ class BLEClientService: Service() {
     }
 
     override fun onDestroy() {
-        stopScan()
+        mHandlerThread?.quit();
+
         val notificationManager = MyApplication.context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
         super.onDestroy()
@@ -95,30 +116,34 @@ class BLEClientService: Service() {
     }
 
     fun onHandleIntent(intent: Intent?) {
-        when(intent?.action){
-            Actions.ACTION_START_BLE_CLIENT->{
-                mAutoScanning = true
-                serviceUUID = UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                try {
-                    val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STARTED)
-                    localBroadcastManager.sendBroadcast(intentRequest)
-                }catch (e: java.lang.Exception){
-                    e.printStackTrace()
+        mServiceHandler?.post(Runnable() {
+            when (intent?.action) {
+                Actions.ACTION_START_BLE_CLIENT -> {
+                    mAutoScanning = true
+                    serviceUUID =
+                        UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
+                    try {
+                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STARTED)
+                        localBroadcastManager.sendBroadcast(intentRequest)
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
+                    }
+                    startScan()
                 }
-                startScan()
-            }
-            Actions.ACTION_STOP_BLE_CLIENT->{
-                mAutoScanning = false
-                stopScan()
-                try {
-                    val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STOPED)
-                    localBroadcastManager.sendBroadcast(intentRequest)
-                }catch (e: java.lang.Exception){
-                    e.printStackTrace()
+                Actions.ACTION_STOP_BLE_CLIENT -> {
+                    mAutoScanning = false
+                    stopScan()
+                    try {
+                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STOPED)
+                        localBroadcastManager.sendBroadcast(intentRequest)
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
+                    }
+                    stopSelf()
                 }
-            }
 
-        }
+            }
+        })
     }
 
     fun verifyPermissions() :Boolean{
@@ -170,7 +195,7 @@ class BLEClientService: Service() {
         }
         mScanCallback = null
         mScanning = false
-        mHandler = null
+
 
         onScanCompleted()
     }
@@ -198,10 +223,7 @@ class BLEClientService: Service() {
             .build()
         mBluetoothLeScanner?.startScan(filters, settings, mScanCallback)
 
-
-
-        mHandler = Handler(Looper.getMainLooper())
-        mHandler!!.postDelayed({ stopScan() }, Constants.SCAN_PERIOD)
+        mServiceHandler?.postDelayed({ stopScan() }, Constants.SCAN_PERIOD)
         mScanning = true
 
 

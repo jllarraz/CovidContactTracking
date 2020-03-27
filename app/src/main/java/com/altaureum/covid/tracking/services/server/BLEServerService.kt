@@ -1,6 +1,5 @@
 package com.altaureum.covid.tracking.services.server
 
-import android.app.IntentService
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.*
@@ -41,10 +40,13 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
+
 class BLEServerService: Service() {
 
+    /*
     private var mHandler: Handler? = null
     private var mLogHandler: Handler? = null
+    */
     private var mDevices: MutableList<BluetoothDevice>? = null
     private var mGattServer: BluetoothGattServer? = null
     private var mBluetoothManager: BluetoothManager? = null
@@ -64,11 +66,36 @@ class BLEServerService: Service() {
 
     }
 
+
+    @Volatile
+    private var mHandlerThread: HandlerThread? = null
+    private var mServiceHandler: ServiceHandler? = null
+
+    // Define how the handler will process messages
+    private class ServiceHandler(looper: Looper?) : Handler(looper) {
+        // Define how to handle any incoming messages here
+        override fun handleMessage(message: Message?) {
+            // ...
+            // When needed, stop the service with
+            // stopSelf();
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
+        // An Android handler thread internally operates on a looper.
+        mHandlerThread = HandlerThread("BLEServerService.HandlerThread")
+        mHandlerThread?.start();
+        // An Android service handler is a handler running on a specific background thread.
+        mServiceHandler = ServiceHandler(mHandlerThread!!.getLooper());
+
         localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
+
+        /*
         mHandler = Handler()
         mLogHandler = Handler(Looper.getMainLooper())
+        */
+
         mDevices = ArrayList()
         mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = mBluetoothManager!!.adapter
@@ -79,7 +106,7 @@ class BLEServerService: Service() {
     }
 
     override fun onDestroy() {
-        fullStopServer()
+        mHandlerThread?.quit();
         val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
         super.onDestroy()
@@ -96,40 +123,44 @@ class BLEServerService: Service() {
     }
 
     fun onHandleIntent(intent: Intent?) {
-        when(intent?.action){
-            Actions.ACTION_START_BLE_SERVER->{
-                serviceUUID = UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                initServer()
-            }
-            Actions.ACTION_RESTART_BLE_SERVER->{
-                if(intent.hasExtra(IntentData.KEY_SERVICE_UUID)) {
+        mServiceHandler?.post(Runnable() {
+            when (intent?.action) {
+                Actions.ACTION_START_BLE_SERVER -> {
                     serviceUUID =
                         UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                }
-
-                if(isServerInitialized) {
-                    restartServer()
-                } else{
                     initServer()
                 }
-            }
-            Actions.ACTION_STOP_BLE_SERVER->{
-               fullStopServer()
-            }
-            Actions.ACTION_BLE_SERVER_CHECK_STATUS->{
-                sendResponseCheckStatus()
-            }
-            Actions.ACTION_SEND_MESSAGE_SERVER->{
-                try {
-                    if(intent.hasExtra(IntentData.KEY_DATA)) {
-                        sendMessage(intent.getByteArrayExtra(IntentData.KEY_DATA)!!)
+                Actions.ACTION_RESTART_BLE_SERVER -> {
+                    if (intent.hasExtra(IntentData.KEY_SERVICE_UUID)) {
+                        serviceUUID =
+                            UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
                     }
-                }catch (e:Exception){
-                    e.printStackTrace()
-                }
-            }
 
-        }
+                    if (isServerInitialized) {
+                        restartServer()
+                    } else {
+                        initServer()
+                    }
+                }
+                Actions.ACTION_STOP_BLE_SERVER -> {
+                    fullStopServer()
+                    stopSelf()
+                }
+                Actions.ACTION_BLE_SERVER_CHECK_STATUS -> {
+                    sendResponseCheckStatus()
+                }
+                Actions.ACTION_SEND_MESSAGE_SERVER -> {
+                    try {
+                        if (intent.hasExtra(IntentData.KEY_DATA)) {
+                            sendMessage(intent.getByteArrayExtra(IntentData.KEY_DATA)!!)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+            }
+        })
     }
 
     fun sendResponseCheckStatus(){
@@ -320,7 +351,8 @@ class BLEServerService: Service() {
         }catch (e:Exception){
             e.printStackTrace()
         }
-        mHandler!!.post { mDevices!!.add(device) }
+        mServiceHandler?.post { mDevices!!.add(device) }
+        //mHandler!!.post { mDevices!!.add(device) }
     }
 
     fun removeDevice(device: BluetoothDevice) {
@@ -332,11 +364,12 @@ class BLEServerService: Service() {
         }catch (e:Exception){
             e.printStackTrace()
         }
-        mHandler!!.post { mDevices!!.remove(device) }
+        mServiceHandler?.post { mDevices!!.remove(device) }
+        //mHandler!!.post { mDevices!!.remove(device) }
     }
 
     fun sendResponse(device: BluetoothDevice?, requestId: Int, status: Int, offset: Int=0, value: ByteArray?=null) {
-        mHandler!!.post { mGattServer!!.sendResponse(device, requestId, status, offset, value) }
+        mServiceHandler?.post { mGattServer!!.sendResponse(device, requestId, status, offset, value) }
     }
 
     private fun sendReverseMessage(message: ByteArray) {
@@ -352,7 +385,7 @@ class BLEServerService: Service() {
     }
 
     private fun sendMessage(message: ByteArray) {
-        mHandler!!.post {
+        mServiceHandler?.post {
             // Reverse message to differentiate original message & response
             Log.d(TAG, "Message Send: " + StringUtils.byteArrayInHexFormat(message))
             notifyCharacteristicEcho(message)
@@ -365,7 +398,7 @@ class BLEServerService: Service() {
 
     // Notifications
     private fun notifyCharacteristic(value: ByteArray, uuid: UUID) {
-        mHandler!!.post {
+        mServiceHandler?.post {
             val service = mGattServer!!.getService(serviceUUID)
             val characteristic = service.getCharacteristic(uuid)
             Log.d(TAG, "Notifying characteristic " + characteristic.uuid.toString()
