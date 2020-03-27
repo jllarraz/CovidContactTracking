@@ -215,8 +215,20 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
         private fun addScanResult(result: ScanResult) {
             val device = result.device
             val deviceAddress = device.address
+
+            val deviceSignal = DeviceSignal()
+            deviceSignal.rssi = result.rssi
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val calculateAccuracy = calculateAccuracy(result.txPower, result.rssi)
+                //if txpower is not provided we use the default one
+                Log.d(TAG, "txPower Received:"+result.txPower)
+                deviceSignal.txPower = if(result.txPower!=ScanResult.TX_POWER_NOT_PRESENT) result.txPower else -59
+            } else{
+                deviceSignal.txPower = -59
+            }
+
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val calculateAccuracy = calculateAccuracy(deviceSignal.txPower, deviceSignal.rssi)
                 Log.d(TAG, "Distance:"+ calculateAccuracy)
 
                 //Toast.makeText(this@ClientActivity, "Distance: "+ calculateAccuracy, Toast.LENGTH_SHORT).show()
@@ -231,13 +243,7 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
 
             if(mScanResults.containsKey(deviceAddress)){
                 val bluetoothDevice = mScanResults[deviceAddress]!!
-                val deviceSignal = DeviceSignal()
-                deviceSignal.rssi = result.rssi
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    deviceSignal.txPower = result.txPower
-                } else{
-                    deviceSignal.txPower = -59
-                }
+
                 bluetoothDevice.deviceSignal = deviceSignal
                 var minutesSinceLastUpdate:Int
                 try {
@@ -253,6 +259,7 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             }else{
                 val discoveredDevice = DiscoveredDevice()
                 discoveredDevice.device = device
+                discoveredDevice.deviceSignal = deviceSignal
                 mScanResults[deviceAddress] = discoveredDevice
                 connectDevice(discoveredDevice.device)
             }
@@ -336,21 +343,20 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
         }
 
         var packetSize:Int=0
-        var packets = ArrayList<ByteArray>()
+        var bufferPackets = ArrayList<ByteArray>()
         var packetInteration = 0
         fun sendData(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, data: ByteArray):Int{
             val chunksize = 20; //20 byte chunk
             packetSize = Math.ceil(data.size/chunksize.toDouble()).toInt()
             val chunkPackage = ChunkHeader()
             chunkPackage.packets=packetSize
-
             characteristic.setValue(Gson().toJson(chunkPackage).toByteArray());
-            Handler(Looper.getMainLooper())?.postDelayed(Runnable {
-                gatt.writeCharacteristic(characteristic)
-                gatt.executeReliableWrite()
-            }, 100)
 
-            packets = ArrayList<ByteArray>()
+            gatt.writeCharacteristic(characteristic)
+            gatt.executeReliableWrite()
+
+
+            bufferPackets = ArrayList<ByteArray>()
             packetInteration = 0
             var start = 0
             for (packet in 0..packetSize-1){
@@ -359,7 +365,7 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
                     end=data.size
                 }
                 val copyOfRange = data.copyOfRange(start, end)
-                packets.add(copyOfRange)
+                bufferPackets.add(copyOfRange)
                 //packets.set(packet, copyOfRange)
                 //packets[packet] = copyOfRange
                 start += chunksize
@@ -371,15 +377,20 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
             super.onCharacteristicWrite(gatt, characteristic, status)
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "Characteristic written successfully")
-                if(packetInteration < packetSize && packets.size>0){
-                    Handler(Looper.getMainLooper())?.postDelayed(Runnable {
-                        characteristic.setValue(packets[packetInteration]);
-                        gatt.writeCharacteristic(characteristic);
-                        packetInteration++;
-                    }, 100)
 
-
+                if(packetInteration < packetSize && bufferPackets.size>0){
+                    val bytesToSend = bufferPackets[packetInteration]
+                    Log.d(TAG, "Sending Information: "+String(bytesToSend))
+                    characteristic.setValue(bytesToSend);
+                    gatt.writeCharacteristic(characteristic);
+                    packetInteration++;
+                } else{
+                    // we finish
+                    //disconnecting becasue we finish sending info
+                    Log.d(TAG, "Disconnecting as we send the info")
+                    disconnectGattServer(gatt)
                 }
+
 
             } else {
                 Log.e(TAG, "Characteristic write unsuccessful, status: $status")
@@ -502,12 +513,15 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
                 return false
             }
             characteristic.value = messageBytes
-            val success = gatt!!.writeCharacteristic(characteristic)
-            if (success) {
-                Log.d(TAG, "Wrote: " + StringUtils.byteArrayInHexFormat(messageBytes))
-            } else {
-                Log.e(TAG, "Failed to write data")
-            }
+            Handler(Looper.myLooper()).postDelayed(Runnable {
+                val success = gatt!!.writeCharacteristic(characteristic)
+                if (success) {
+                    Log.d(TAG, "Wrote: " + StringUtils.byteArrayInHexFormat(messageBytes))
+                } else {
+                    Log.e(TAG, "Failed to write data")
+                }
+            }, 100)
+
             return true
         }
 
@@ -530,13 +544,19 @@ class BLEClientService: IntentService(BLEClientService::class.java.simpleName) {
     private fun connectDevice(device: BluetoothDevice?) {
         Log.d(TAG, "Connecting to " + device!!.address)
         val discoveredDevice = mScanResults?.get(device.address)
-        discoveredDevice?.isTryingToConnect = true
+        discoveredDevice?.let {
+            if(!it.isTryingToConnect && !it.isConnected) {
+                it.isTryingToConnect = true
+                val gattClientCallback = GattClientCallback()
+                Handler(Looper.myLooper()).postDelayed(Runnable {
+                    val connectGatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        device.connectGatt(this, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
+                    } else {
+                        device.connectGatt(this, true, gattClientCallback)
+                    }
+                }, 100)
 
-        val gattClientCallback = GattClientCallback()
-        val connectGatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            device.connectGatt(this, false, gattClientCallback, BluetoothDevice.TRANSPORT_LE)
-        } else {
-            device.connectGatt(this, false, gattClientCallback)
+            }
         }
     }
 

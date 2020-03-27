@@ -251,7 +251,7 @@ class BLEServerService: IntentService(BLEServerService::class.java.simpleName) {
                 .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_LOW)
                 .build()
         val parcelUuid = ParcelUuid(serviceUUID)
-        val data = AdvertiseData.Builder()
+        val data = AdvertiseData.Builder().setIncludeTxPowerLevel(true)
                 .addServiceUuid(parcelUuid)
                 .build()
         mBluetoothLeAdvertiser!!.startAdvertising(settings, data, mAdvertiseCallback)
