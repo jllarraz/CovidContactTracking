@@ -66,9 +66,40 @@ class BLEClientService: Service() {
     private var mServiceHandler: ServiceHandler? = null
 
     // Define how the handler will process messages
-    private class ServiceHandler(looper: Looper?) : Handler(looper) {
+    inner class ServiceHandler(looper: Looper?) : Handler(looper) {
         // Define how to handle any incoming messages here
         override fun handleMessage(message: Message?) {
+            when(message?.what) {
+                MESSAGE_ACTION_START_BLE_CLIENT -> {
+                    mAutoScanning = true
+                    serviceUUID =
+                        UUID.fromString(message.data.getString(IntentData.KEY_SERVICE_UUID))
+                    try {
+                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STARTED)
+                        localBroadcastManager.sendBroadcast(intentRequest)
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
+                    }
+                    startScan()
+                }
+                MESSAGE_ACTION_STOP_BLE_CLIENT -> {
+                    mAutoScanning = false
+                    stopScan()
+                    try {
+                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STOPED)
+                        localBroadcastManager.sendBroadcast(intentRequest)
+                    } catch (e: java.lang.Exception) {
+                        e.printStackTrace()
+                    }
+                    stopSelf()
+                }
+                MESSAGE_ACTION_START_BLE_CLIENT_SCAN->{
+                    startScan()
+                }
+                MESSAGE_ACTION_STOP_BLE_CLIENT_SCAN->{
+                    stopScan()
+                }
+            }
             // ...
             // When needed, stop the service with
             // stopSelf();
@@ -116,34 +147,21 @@ class BLEClientService: Service() {
     }
 
     fun onHandleIntent(intent: Intent?) {
-        mServiceHandler?.post(Runnable() {
-            when (intent?.action) {
-                Actions.ACTION_START_BLE_CLIENT -> {
-                    mAutoScanning = true
-                    serviceUUID =
-                        UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                    try {
-                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STARTED)
-                        localBroadcastManager.sendBroadcast(intentRequest)
-                    } catch (e: java.lang.Exception) {
-                        e.printStackTrace()
-                    }
-                    startScan()
-                }
-                Actions.ACTION_STOP_BLE_CLIENT -> {
-                    mAutoScanning = false
-                    stopScan()
-                    try {
-                        val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STOPED)
-                        localBroadcastManager.sendBroadcast(intentRequest)
-                    } catch (e: java.lang.Exception) {
-                        e.printStackTrace()
-                    }
-                    stopSelf()
-                }
-
+        when (intent?.action) {
+            Actions.ACTION_START_BLE_CLIENT -> {
+                val message =
+                    mServiceHandler?.obtainMessage(MESSAGE_ACTION_START_BLE_CLIENT)
+                message?.data = intent.extras
+                mServiceHandler?.sendMessage(message)
             }
-        })
+            Actions.ACTION_STOP_BLE_CLIENT -> {
+                val message =
+                    mServiceHandler?.obtainMessage(MESSAGE_ACTION_STOP_BLE_CLIENT)
+                message?.data = intent.extras
+                mServiceHandler?.sendMessage(message)
+            }
+        }
+
     }
 
     fun verifyPermissions() :Boolean{
@@ -585,7 +603,9 @@ class BLEClientService: Service() {
     fun onScanCompleted(){
         Log.d(TAG, "Stopped scanning.")
         if(mAutoScanning){
-            startScan()
+            val message = mServiceHandler?.obtainMessage(MESSAGE_ACTION_START_BLE_CLIENT_SCAN)
+            mServiceHandler?.sendMessage(message)
+            //startScan()
         }
 
     }
@@ -626,7 +646,12 @@ class BLEClientService: Service() {
         }
     }
     companion object{
-        val TAG = BLEClientService::class.java.simpleName
-        val TIME_TO_CONNECT_SECONDS=20
+        private val TAG = BLEClientService::class.java.simpleName
+        private val TIME_TO_CONNECT_SECONDS=20
+
+        private val MESSAGE_ACTION_START_BLE_CLIENT=0
+        private val MESSAGE_ACTION_STOP_BLE_CLIENT=1
+        private val MESSAGE_ACTION_START_BLE_CLIENT_SCAN=2
+        private val MESSAGE_ACTION_STOP_BLE_CLIENT_SCAN=3
     }
 }

@@ -72,12 +72,41 @@ class BLEServerService: Service() {
     private var mServiceHandler: ServiceHandler? = null
 
     // Define how the handler will process messages
-    private class ServiceHandler(looper: Looper?) : Handler(looper) {
+    inner class ServiceHandler(looper: Looper?) : Handler(looper) {
         // Define how to handle any incoming messages here
         override fun handleMessage(message: Message?) {
-            // ...
-            // When needed, stop the service with
-            // stopSelf();
+            when(message?.what){
+                MESSAGE_ACTION_START_BLE_SERVER->{
+                    serviceUUID =
+                        UUID.fromString(message.data.getString(IntentData.KEY_SERVICE_UUID))
+                    initServer()
+                }
+                MESSAGE_ACTION_STOP_BLE_SERVER->{
+                    fullStopServer()
+                    stopSelf()
+                }
+                MESSAGE_ACTION_RESTART_BLE_SERVER->{
+                    serviceUUID =
+                        UUID.fromString(message.data.getString(IntentData.KEY_SERVICE_UUID))
+                    if (isServerInitialized) {
+                        restartServer()
+                    } else {
+                        initServer()
+                    }
+                }
+                MESSAGE_ACTION_BLE_SERVER_CHECK_STATUS->{
+                    sendResponseCheckStatus()
+                }
+                MESSAGE_ACTION_SEND_MESSAGE_SERVER->{
+                    try {
+                        if (message.data.containsKey(IntentData.KEY_DATA)) {
+                            sendMessage(message.data.getByteArray(IntentData.KEY_DATA)!!)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
         }
     }
 
@@ -123,44 +152,38 @@ class BLEServerService: Service() {
     }
 
     fun onHandleIntent(intent: Intent?) {
-        mServiceHandler?.post(Runnable() {
             when (intent?.action) {
                 Actions.ACTION_START_BLE_SERVER -> {
-                    serviceUUID =
-                        UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                    initServer()
+                    val message =
+                        mServiceHandler?.obtainMessage(MESSAGE_ACTION_START_BLE_SERVER)
+                    message?.data = intent.extras
+                    mServiceHandler?.sendMessage(message)
                 }
                 Actions.ACTION_RESTART_BLE_SERVER -> {
-                    if (intent.hasExtra(IntentData.KEY_SERVICE_UUID)) {
-                        serviceUUID =
-                            UUID.fromString(intent.getStringExtra(IntentData.KEY_SERVICE_UUID))
-                    }
-
-                    if (isServerInitialized) {
-                        restartServer()
-                    } else {
-                        initServer()
-                    }
+                    val message =
+                        mServiceHandler?.obtainMessage(MESSAGE_ACTION_RESTART_BLE_SERVER)
+                    message?.data = intent.extras
+                    mServiceHandler?.sendMessage(message)
                 }
                 Actions.ACTION_STOP_BLE_SERVER -> {
-                    fullStopServer()
-                    stopSelf()
+                    val message =
+                        mServiceHandler?.obtainMessage(MESSAGE_ACTION_STOP_BLE_SERVER)
+                    message?.data = intent.extras
+                    mServiceHandler?.sendMessage(message)
                 }
                 Actions.ACTION_BLE_SERVER_CHECK_STATUS -> {
-                    sendResponseCheckStatus()
+                    val message =
+                        mServiceHandler?.obtainMessage(MESSAGE_ACTION_BLE_SERVER_CHECK_STATUS)
+                    message?.data = intent.extras
+                    mServiceHandler?.sendMessage(message)
                 }
                 Actions.ACTION_SEND_MESSAGE_SERVER -> {
-                    try {
-                        if (intent.hasExtra(IntentData.KEY_DATA)) {
-                            sendMessage(intent.getByteArrayExtra(IntentData.KEY_DATA)!!)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+                    val message =
+                        mServiceHandler?.obtainMessage(MESSAGE_ACTION_SEND_MESSAGE_SERVER)
+                    message?.data = intent.extras
+                    mServiceHandler?.sendMessage(message)
                 }
-
             }
-        })
     }
 
     fun sendResponseCheckStatus(){
@@ -649,8 +672,12 @@ class BLEServerService: Service() {
     }
 
     companion object{
-        val TAG = BLEServerService::class.java.simpleName
-        val TIME_TO_UPDATE_SECONDS=60
-
+        private val TAG = BLEServerService::class.java.simpleName
+        private val TIME_TO_UPDATE_SECONDS=60
+        private val MESSAGE_ACTION_START_BLE_SERVER=0
+        private val MESSAGE_ACTION_RESTART_BLE_SERVER=1
+        private val MESSAGE_ACTION_STOP_BLE_SERVER=2
+        private val MESSAGE_ACTION_SEND_MESSAGE_SERVER=3
+        private val MESSAGE_ACTION_BLE_SERVER_CHECK_STATUS=4
     }
 }
