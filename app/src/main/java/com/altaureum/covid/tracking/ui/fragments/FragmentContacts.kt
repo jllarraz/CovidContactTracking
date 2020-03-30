@@ -119,7 +119,7 @@ class FragmentContacts: Fragment(), Injectable {
         }
 
         val intentFilter = IntentFilter()
-        intentFilter.addAction(Actions.ACTION_TRACKER_STOPPED)
+        intentFilter.addAction(Actions.ACTION_TRACKER_STARTED)
         intentFilter.addAction(Actions.ACTION_TRACKER_STOPPED)
         intentFilter.addAction(Actions.ACTION_TRACKER_STATUS_RESPONSE)
 
