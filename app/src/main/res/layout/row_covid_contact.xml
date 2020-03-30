@@ -19,7 +19,7 @@
             android:text="@string/app_name"
             />
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/valueTime"
+            android:id="@+id/firstContactTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="2"
@@ -30,26 +30,63 @@
             />
 
         <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/lastContactTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/firstContactTime"
+            app:layout_constraintStart_toStartOf="@+id/firstContactTime"
+            android:text="@string/no_data_available"
+            />
+
+        <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/contactTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="2"
             style="@style/TextAppearance.AppCompat.Body2"
-            app:layout_constraintTop_toBottomOf="@+id/valueTime"
+            app:layout_constraintTop_toBottomOf="@+id/lastContactTime"
             app:layout_constraintStart_toStartOf="@+id/valueId"
             android:text="@string/contact_time"
             />
 
         <androidx.appcompat.widget.AppCompatTextView
-            android:id="@+id/contactDistance"
+            android:id="@+id/numberOfHits"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:maxLines="2"
             style="@style/TextAppearance.AppCompat.Body2"
-            app:layout_constraintTop_toBottomOf="@+id/valueTime"
+            app:layout_constraintTop_toBottomOf="@+id/lastContactTime"
             app:layout_constraintStart_toEndOf="@+id/contactTime"
             android:paddingStart="24dp"
-            android:text="@string/last_distance"
-            android:visibility="invisible"
+            android:text="@string/contact_hits"
+
+            />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/contactDistanceBle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/contactTime"
+            app:layout_constraintStart_toStartOf="@+id/valueId"
+
+            android:text="@string/last_distance_ble"
+
+            />
+
+        <androidx.appcompat.widget.AppCompatTextView
+            android:id="@+id/contactDistanceGps"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            style="@style/TextAppearance.AppCompat.Body2"
+            app:layout_constraintTop_toBottomOf="@+id/contactTime"
+            app:layout_constraintStart_toEndOf="@+id/contactDistanceBle"
+            android:paddingStart="24dp"
+            android:text="@string/last_distance_ble"
+
             />
 </androidx.constraintlayout.widget.ConstraintLayout>

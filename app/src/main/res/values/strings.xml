@@ -55,12 +55,17 @@
     <string name="permission_message_after_deny">"You did not give the app permission for Location. Please set these permissions manually in Settings > Apps > Covid Tracking > Permissions"</string>
 
     <string name="contact_time">Contact time: %1d seconds</string>
-    <string name="last_distance">Distance: %1.2f meters</string>
+    <string name="contact_hits">Number of hits: %1d</string>
+    <string name="last_distance_ble">Distance BLE: %1.2f meters</string>
+    <string name="last_distance_gps">Distance GPS: %1.2f meters</string>
 
     <string name="ble_server_notification">Advertising your Covid Id</string>
     <string name="ble_client_notification">Tracking Covid id contacs</string>
 
     <string name="notification_channel_name">Covid</string>
     <string name="notification_description">Notification channel used by Covid tracking app to report events to the user</string>
+
+    <string name="first_contact">First contact: %1s</string>
+    <string name="last_contact">Last contact: %1s</string>
 
 </resources>

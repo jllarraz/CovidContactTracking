@@ -1,12 +1,12 @@
 package com.altaureum.covid.tracking.ui.adapters
 
+import android.location.Location
 import androidx.appcompat.widget.AppCompatTextView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Filter
 import android.widget.Filterable
-import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -29,7 +29,7 @@ class ContactsAdapter(internal var data: OrderedRealmCollection<CovidContact>?, 
     private val disposable = CompositeDisposable()
     private var realm: Realm?=null
     private val lifecycleRegistry = LifecycleRegistry(this)
-    val simpleDateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.ENGLISH)
+    val simpleDateFormat = SimpleDateFormat("HH:mm:ss dd/MM/yyyy", Locale.ENGLISH)
 
     init {
         realm = RealmUtils.getInstance(context!!)
@@ -132,16 +132,22 @@ class ContactsAdapter(internal var data: OrderedRealmCollection<CovidContact>?, 
 
     private inner class ViewHolder(itemView: View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
         lateinit var valueId: AppCompatTextView
-        lateinit var valueTime: AppCompatTextView
+        lateinit var firstContactTime: AppCompatTextView
+        lateinit var lastContactTime: AppCompatTextView
         lateinit var contactTime: AppCompatTextView
-        lateinit var contactDistance: AppCompatTextView
+        lateinit var numberOfHits: AppCompatTextView
+        lateinit var contactDistanceBle: AppCompatTextView
+        lateinit var contactDistanceGps: AppCompatTextView
         lateinit var layout: ConstraintLayout
 
         init {
             valueId = itemView.findViewById(com.altaureum.covid.tracking.R.id.valueId)
-            valueTime = itemView.findViewById(com.altaureum.covid.tracking.R.id.valueTime)
+            firstContactTime = itemView.findViewById(com.altaureum.covid.tracking.R.id.firstContactTime)
+            lastContactTime = itemView.findViewById(com.altaureum.covid.tracking.R.id.lastContactTime)
             contactTime = itemView.findViewById(com.altaureum.covid.tracking.R.id.contactTime)
-            contactDistance = itemView.findViewById(com.altaureum.covid.tracking.R.id.contactDistance)
+            numberOfHits = itemView.findViewById(com.altaureum.covid.tracking.R.id.numberOfHits)
+            contactDistanceBle = itemView.findViewById(com.altaureum.covid.tracking.R.id.contactDistanceBle)
+            contactDistanceGps = itemView.findViewById(com.altaureum.covid.tracking.R.id.contactDistanceGps)
             layout = itemView.findViewById(com.altaureum.covid.tracking.R.id.layoutContainer)
             layout.setOnClickListener {
                 val position = adapterPosition
@@ -156,7 +162,16 @@ class ContactsAdapter(internal var data: OrderedRealmCollection<CovidContact>?, 
         fun bind(covidContact: CovidContact) {
             valueId.text = covidContact.covidId
             if(covidContact.firstContactDate!=null){
-                valueTime.text = simpleDateFormat.format(covidContact.firstContactDate!!)
+                val formatDate = simpleDateFormat.format(covidContact.firstContactDate)
+                firstContactTime.text = context?.getString(com.altaureum.covid.tracking.R.string.first_contact,
+                    formatDate
+                )
+            }
+            if(covidContact.lastContactDate!=null){
+                val formatDate = simpleDateFormat.format(covidContact.lastContactDate)
+                lastContactTime.text = context?.getString(com.altaureum.covid.tracking.R.string.last_contact,
+                    formatDate
+                )
             }
             var secondsInContact:Long=0
             if(covidContact.firstContactDate!=null && covidContact.lastContactDate!=null){
@@ -167,7 +182,25 @@ class ContactsAdapter(internal var data: OrderedRealmCollection<CovidContact>?, 
             contactTime.text = context?.getString(com.altaureum.covid.tracking.R.string.contact_time, secondsInContact)
 
             val last = covidContact.locations?.last()!!
-            contactDistance.text = context?.getString(com.altaureum.covid.tracking.R.string.last_distance, last.calculatedDistance)
+            contactDistanceBle.text = context?.getString(com.altaureum.covid.tracking.R.string.last_distance_ble, last.calculatedDistance)
+
+            if(last.contactLatitude!=0.0 && last.contactLongitude!=0.0 && last.latitude!=0.0 && last.longitude!=0.0 ){
+                val location = Location("")
+                location.longitude = last.longitude
+                location.latitude = last.latitude
+
+                val locationClient = Location("")
+                locationClient.longitude = last.contactLongitude
+                locationClient.latitude = last.contactLatitude
+                contactDistanceGps.text = context?.getString(com.altaureum.covid.tracking.R.string.last_distance_gps, location.distanceTo(locationClient))
+                contactDistanceGps.visibility = View.VISIBLE
+            } else{
+                contactDistanceGps.visibility = View.GONE
+            }
+
+            numberOfHits.text = context?.getString(com.altaureum.covid.tracking.R.string.contact_hits,  covidContact.locations?.size)
+
+
         }
 
     }
