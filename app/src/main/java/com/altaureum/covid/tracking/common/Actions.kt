@@ -61,22 +61,6 @@ object Actions {
 
 
     /**
-     * Request Actions BLE Client LIGHT
-     */
-    val ACTION_START_SCAN_BLE_LIGHT_CLIENT="com.altaureum.covid.tracking.common.action.START_SCAN_BLE_LIGHT_CLIENT"
-    val ACTION_STOP_SCAN_BLE_LIGHT_CLIENT="com.altaureum.covid.tracking.common.action.STOP_SCAN_BLE_LIGHT_CLIENT"
-
-    /**
-     * Request Actions BLE Client LIGHT
-     */
-    val ACTION_BLE_LIGHT_CLIENT_SCAN_STARTED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_CLIENT_SCAN_STARTED"
-    val ACTION_BLE_LIGHT_CLIENT_SCAN_STOPED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_CLIENT_SCAN_STOPED"
-    val ACTION_BLE_LIGHT_CLIENT_SCAN_FAILED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_CLIENT_SCAN_FAILED"
-    val ACTION_BLE_LIGHT_DEVICE_ADDED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_DEVICE_ADDED"
-    val ACTION_BLE_LIGHT_DEVICE_LIGHT_REMOVED="com.altaureum.covid.tracking.common.action.BLE_LIGHT_DEVICE_LIGHT_REMOVED"
-
-
-    /**
      * Request Actions BLE Client
      */
     val ACTION_BLE_CLIENT_SCAN_STARTED="com.altaureum.covid.tracking.common.action.BLE_CLIENT_SCAN_STARTED"

@@ -673,7 +673,7 @@ class BLEServerService: Service() {
 
     companion object{
         private val TAG = BLEServerService::class.java.simpleName
-        private val TIME_TO_UPDATE_SECONDS=60
+        private val TIME_TO_UPDATE_SECONDS=5*60// 5 minutes
         private val MESSAGE_ACTION_START_BLE_SERVER=0
         private val MESSAGE_ACTION_RESTART_BLE_SERVER=1
         private val MESSAGE_ACTION_STOP_BLE_SERVER=2

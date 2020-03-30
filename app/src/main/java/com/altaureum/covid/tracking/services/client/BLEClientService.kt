@@ -241,7 +241,7 @@ class BLEClientService: Service() {
             .build()
         mBluetoothLeScanner?.startScan(filters, settings, mScanCallback)
 
-        mServiceHandler?.postDelayed({ stopScan() }, Constants.SCAN_PERIOD)
+        //mServiceHandler?.postDelayed({ stopScan() }, Constants.SCAN_PERIOD)
         mScanning = true
 
 

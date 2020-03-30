@@ -76,18 +76,6 @@
             </intent-filter>
         </service>
 
-        <service android:name=".services.client.BLEClientServiceLight"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.altaureum.covid.tracking.common.action.START_SCAN_BLE_LIGHT_CLIENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.altaureum.covid.tracking.common.action.STOP_SCAN_BLE_LIGHT_CLIENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </service>
-
         <service android:name=".services.client.BLEClientService"
             android:exported="false">
             <intent-filter>
