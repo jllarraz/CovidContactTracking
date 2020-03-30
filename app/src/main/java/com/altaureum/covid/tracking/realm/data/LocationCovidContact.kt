@@ -13,6 +13,10 @@ open class LocationCovidContact:Parcelable, RealmObject {
     var date: Date? = null
     var latitude = 0.0
     var longitude = 0.0
+
+    var contactLatitude = 0.0
+    var contactLongitude = 0.0
+
     var calculatedDistance = 0.0
     var rssi =0
     var txPower =0
@@ -26,6 +30,8 @@ open class LocationCovidContact:Parcelable, RealmObject {
         this.date = if(covidContact.date!=null) Date(covidContact.date!!.time) else null
         this.latitude = covidContact.latitude
         this.longitude = covidContact.longitude
+        this.contactLatitude = covidContact.contactLatitude
+        this.contactLongitude = covidContact.contactLongitude
         this.calculatedDistance = covidContact.calculatedDistance
         this.rssi = covidContact.rssi
         this.txPower = covidContact.txPower
@@ -36,6 +42,8 @@ open class LocationCovidContact:Parcelable, RealmObject {
         this.date = if (input.readInt() == 1) Date(input.readLong()) else Date()
         this.latitude = input.readDouble()
         this.longitude = input.readDouble()
+        this.contactLatitude = input.readDouble()
+        this.contactLongitude = input.readDouble()
         this.calculatedDistance = input.readDouble()
         this.rssi = input.readInt()
         this.txPower = input.readInt()
@@ -59,6 +67,8 @@ open class LocationCovidContact:Parcelable, RealmObject {
 
         dest.writeDouble(latitude)
         dest.writeDouble(longitude)
+        dest.writeDouble(contactLatitude)
+        dest.writeDouble(contactLongitude)
         dest.writeDouble(calculatedDistance)
 
         dest.writeInt(rssi)

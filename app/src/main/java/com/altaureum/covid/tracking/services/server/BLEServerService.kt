@@ -34,6 +34,7 @@ import com.altaureum.covid.tracking.services.notification.NotificationFactory
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.ByteUtils
 import com.altaureum.covid.tracking.util.StringUtils
+import com.google.android.gms.location.*
 import com.google.gson.Gson
 import io.realm.Sort
 import java.util.*
@@ -57,6 +58,11 @@ class BLEServerService: Service() {
     private var isServerInitialized=false
     private lateinit var localBroadcastManager: LocalBroadcastManager
     private var serviceUUID:UUID?=null
+
+    private lateinit var fusedLocation: FusedLocationProviderClient
+    private var locationRequest = LocationRequest()
+    private var latitude:Double= 0.0
+    private var longitude:Double= 0.0
 
     private val mBinder = ServerServiceBinder()
 
@@ -110,6 +116,22 @@ class BLEServerService: Service() {
         }
     }
 
+    private val locationCallback= object :LocationCallback(){
+        override fun onLocationResult(locationResult: LocationResult?) {
+            if(locationResult!=null) {
+                locationResult?.lastLocation?.latitude?.let {
+                    latitude = it
+                }
+
+                locationResult?.lastLocation?.longitude?.let {
+                    longitude = it
+                }
+            }
+
+            super.onLocationResult(locationResult)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         // An Android handler thread internally operates on a looper.
@@ -119,6 +141,10 @@ class BLEServerService: Service() {
         mServiceHandler = ServiceHandler(mHandlerThread!!.getLooper());
 
         localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
+
+        fusedLocation = LocationServices.getFusedLocationProviderClient(this)
+        locationRequest = createLocationRequest()
+        fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper())
 
         /*
         mHandler = Handler()
@@ -136,6 +162,7 @@ class BLEServerService: Service() {
 
     override fun onDestroy() {
         mHandlerThread?.quit();
+        fusedLocation.removeLocationUpdates(locationCallback)
         val notificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
         super.onDestroy()
@@ -148,6 +175,15 @@ class BLEServerService: Service() {
     @RequiresApi(Build.VERSION_CODES.O)
     fun startForegroundWithNotification(){
         startForeground(NotificationFactory.NOTIFICATION_ID, NotificationFactory.getNotification(this))
+
+    }
+
+    fun createLocationRequest(): LocationRequest{
+        val locationRequest = LocationRequest.create()
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = LOCATION_REQUEST_INTERVAL
+        locationRequest.fastestInterval = LOCATION_REQUEST_FAST_INTERVAL
+        return locationRequest
 
     }
 
@@ -622,8 +658,10 @@ class BLEServerService: Service() {
 
             val locationCovidContact = LocationCovidContact()
 
-            locationCovidContact.latitude = 0.0
-            locationCovidContact.longitude = 0.0
+            locationCovidContact.latitude = latitude
+            locationCovidContact.longitude = longitude
+            locationCovidContact.contactLongitude = covidMessage.longitude
+            locationCovidContact.contactLatitude = covidMessage.latitute
             locationCovidContact.date = date
 
             if(covidMessage.deviceSignal!=null) {
@@ -662,6 +700,10 @@ class BLEServerService: Service() {
                     locationCovidContact.txPower = covidMessage.deviceSignal!!.txPower
                 }
                 locationCovidContact.date = date
+                locationCovidContact.latitude = latitude
+                locationCovidContact.longitude = longitude
+                locationCovidContact.contactLongitude = covidMessage.longitude
+                locationCovidContact.contactLatitude = covidMessage.latitute
                 covidContact?.locations?.add(locationCovidContact)
                 realm?.covidContacts()?.updateSync(covidContact)
 
@@ -674,6 +716,9 @@ class BLEServerService: Service() {
     companion object{
         private val TAG = BLEServerService::class.java.simpleName
         private val TIME_TO_UPDATE_SECONDS=5*60// 5 minutes
+        private val LOCATION_REQUEST_INTERVAL:Long=15000
+        private val LOCATION_REQUEST_FAST_INTERVAL:Long=7500
+
         private val MESSAGE_ACTION_START_BLE_SERVER=0
         private val MESSAGE_ACTION_RESTART_BLE_SERVER=1
         private val MESSAGE_ACTION_STOP_BLE_SERVER=2

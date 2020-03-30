@@ -1,8 +1,6 @@
 package com.altaureum.covid.tracking.services.client
 
 import android.Manifest
-import android.app.IntentService
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.bluetooth.*
@@ -15,22 +13,19 @@ import android.os.*
 import 	androidx.preference.PreferenceManager
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.altaureum.covid.tracking.MyApplication
-import com.altaureum.covid.tracking.R
 import com.altaureum.covid.tracking.common.Actions
-import com.altaureum.covid.tracking.common.Constants
 import com.altaureum.covid.tracking.common.IntentData
 import com.altaureum.covid.tracking.common.Preferences
 import com.altaureum.covid.tracking.services.data.ChunkHeader
 import com.altaureum.covid.tracking.services.data.CovidMessage
 import com.altaureum.covid.tracking.services.data.DeviceSignal
 import com.altaureum.covid.tracking.services.notification.NotificationFactory
-import com.altaureum.covid.tracking.services.server.BLEServerService
 import com.altaureum.covid.tracking.util.BluetoothUtils
 import com.altaureum.covid.tracking.util.BluetoothUtils.calculateAccuracy
 import com.altaureum.covid.tracking.util.StringUtils
+import com.google.android.gms.location.*
 import com.google.gson.Gson
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -53,6 +48,12 @@ class BLEClientService: Service() {
     private lateinit var localBroadcastManager: LocalBroadcastManager
     private var serviceUUID: UUID?=null
 
+    private lateinit var fusedLocation: FusedLocationProviderClient
+    private var locationRequest = LocationRequest()
+    private var latitude:Double= 0.0
+    private var longitude:Double= 0.0
+    private var isClientLocationAllowed:Boolean = DEFAULT_IS_INCLUDE_CLIENT_LOCATION
+
     private val mBinder = BLEClientServiceBinder()
 
     inner class BLEClientServiceBinder: Binder(){
@@ -65,6 +66,22 @@ class BLEClientService: Service() {
     private var mHandlerThread: HandlerThread? = null
     private var mServiceHandler: ServiceHandler? = null
 
+    private val locationCallback= object : LocationCallback(){
+        override fun onLocationResult(locationResult: LocationResult?) {
+            if(locationResult!=null) {
+                locationResult?.lastLocation?.latitude?.let {
+                    latitude = it
+                }
+
+                locationResult?.lastLocation?.longitude?.let {
+                    longitude = it
+                }
+            }
+
+            super.onLocationResult(locationResult)
+        }
+    }
+
     // Define how the handler will process messages
     inner class ServiceHandler(looper: Looper?) : Handler(looper) {
         // Define how to handle any incoming messages here
@@ -74,6 +91,7 @@ class BLEClientService: Service() {
                     mAutoScanning = true
                     serviceUUID =
                         UUID.fromString(message.data.getString(IntentData.KEY_SERVICE_UUID))
+                    isClientLocationAllowed = message.data.getBoolean(IntentData.KEY_INCLUDE_CLIENT_LOCATION, DEFAULT_IS_INCLUDE_CLIENT_LOCATION)
                     try {
                         val intentRequest = Intent(Actions.ACTION_BLE_CLIENT_STARTED)
                         localBroadcastManager.sendBroadcast(intentRequest)
@@ -116,7 +134,11 @@ class BLEClientService: Service() {
 
         localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
 
-        localBroadcastManager = LocalBroadcastManager.getInstance(applicationContext)
+        fusedLocation = LocationServices.getFusedLocationProviderClient(this)
+        locationRequest = createLocationRequest()
+        fusedLocation.requestLocationUpdates(locationRequest, locationCallback, Looper.myLooper())
+
+
         mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         mBluetoothAdapter = mBluetoothManager!!.adapter
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -126,6 +148,7 @@ class BLEClientService: Service() {
 
     override fun onDestroy() {
         mHandlerThread?.quit();
+        fusedLocation.removeLocationUpdates(locationCallback)
 
         val notificationManager = MyApplication.context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(NotificationFactory.NOTIFICATION_ID)
@@ -144,6 +167,15 @@ class BLEClientService: Service() {
 
     override fun onBind(intent: Intent?): IBinder? {
         return mBinder
+    }
+
+    fun createLocationRequest(): LocationRequest{
+        val locationRequest = LocationRequest.create()
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = LOCATION_REQUEST_INTERVAL
+        locationRequest.fastestInterval = LOCATION_REQUEST_FAST_INTERVAL
+        return locationRequest
+
     }
 
     fun onHandleIntent(intent: Intent?) {
@@ -315,12 +347,6 @@ class BLEClientService: Service() {
                 val bluetoothDevice = mScanResults[deviceAddress]!!
 
                 bluetoothDevice.deviceSignal = deviceSignal
-                var minutesSinceLastUpdate:Int
-                try {
-                    minutesSinceLastUpdate = TimeUnit.MILLISECONDS.toSeconds(Date().time - bluetoothDevice.lastUpdated?.time!!).toInt()
-                }catch (e:java.lang.Exception){
-                    minutesSinceLastUpdate=-1
-                }
                 // If we know this device we try to connec if is not trying to connect and  we didnt connect in the last 5 minutes or never
                 if(!bluetoothDevice.isTryingToConnect && !bluetoothDevice.isConnected){//&& (minutesSinceLastUpdate == -1 || minutesSinceLastUpdate>TIME_TO_CONNECT_SECONDS)){
                     connectDevice(bluetoothDevice.device)
@@ -501,6 +527,10 @@ class BLEClientService: Service() {
 
                     val covidMessage = CovidMessage()
                     covidMessage.covidId=covidId
+                    if(isClientLocationAllowed) {
+                        covidMessage.latitute = latitude
+                        covidMessage.longitude = longitude
+                    }
                     val address = gatt.device.address
                     if(mScanResults!!.containsKey(address)) {
                         val deviceSignal = mScanResults!!.get(address)?.deviceSignal
@@ -648,10 +678,14 @@ class BLEClientService: Service() {
     companion object{
         private val TAG = BLEClientService::class.java.simpleName
         private val TIME_TO_CONNECT_SECONDS=20
+        private val LOCATION_REQUEST_INTERVAL:Long=15000
+        private val LOCATION_REQUEST_FAST_INTERVAL:Long=7500
 
         private val MESSAGE_ACTION_START_BLE_CLIENT=0
         private val MESSAGE_ACTION_STOP_BLE_CLIENT=1
         private val MESSAGE_ACTION_START_BLE_CLIENT_SCAN=2
         private val MESSAGE_ACTION_STOP_BLE_CLIENT_SCAN=3
+
+        private val DEFAULT_IS_INCLUDE_CLIENT_LOCATION=true
     }
 }

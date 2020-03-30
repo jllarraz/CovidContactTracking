@@ -167,6 +167,8 @@ class MyApplication: Application(), HasAndroidInjector {
             intentRequest.setPackage(this.getPackageName());
             intentRequest.action = Actions.ACTION_START_BLE_CLIENT
             intentRequest.putExtra(IntentData.KEY_SERVICE_UUID, uuid.toString())
+            // by default we include the our location in the message to the server
+            intentRequest.putExtra(IntentData.KEY_INCLUDE_CLIENT_LOCATION, true)
             startService(intentRequest)
         }catch (e: Exception){
         }
