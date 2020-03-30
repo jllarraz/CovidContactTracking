@@ -224,8 +224,6 @@ class CovidContactDao(val realm: Realm) {
     //TODO Improve update
     fun updateSync(covidContact: CovidContact) {
         realm.executeTransaction {
-            val realmResults = it.where(CovidContact::class.java).equalTo("uuid", covidContact.uuid, Case.INSENSITIVE).findAll()
-            realmResults.deleteAllFromRealm()
             it.insertOrUpdate(covidContact)
         }
     }
