@@ -102,6 +102,9 @@ object BluetoothUtils {
         if (rssi == 0) {
             return -1.0 // if we cannot determine accuracy, return -1.
         }
-        return Math.pow(10.0, (txPower.toDouble() - rssi) / (10 * 2))
+        val ratio = rssi*1.0/txPower.toDouble()
+        val distance = (0.89976)*Math.pow(ratio, 7.7095)+0.111
+        //return Math.pow(10.0, (txPower.toDouble() - rssi) / (10 * 2))
+        return distance/1000000
     }
 }

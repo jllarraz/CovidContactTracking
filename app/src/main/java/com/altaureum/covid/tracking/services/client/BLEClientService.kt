@@ -322,8 +322,8 @@ class BLEClientService: Service() {
             deviceSignal.rssi = result.rssi
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 //if txpower is not provided we use the default one
-                Log.d(TAG, "txPower Received:"+result.txPower)
-                deviceSignal.txPower = if(result.txPower!=ScanResult.TX_POWER_NOT_PRESENT) result.txPower else -59
+                Log.d(TAG, "txPower Received:"+result.scanRecord?.txPowerLevel)
+                deviceSignal.txPower = if(result.scanRecord?.txPowerLevel!=ScanResult.TX_POWER_NOT_PRESENT) result.scanRecord?.txPowerLevel!! else -59
             } else{
                 deviceSignal.txPower = -59
             }
