@@ -13,6 +13,10 @@ This project is based in the information and tutorials found in
 - https://github.com/bignerdranch/android-bluetooth-testbed
 - https://mothership.sg/2020/03/trace-together-covid/
 
+## Screen shoot
+
+![alt text](https://github.com/jllarraz/CovidContactTracking/blob/master/ScreenShoot/screen_1.png)
+
 
 ## Build & Run
 
